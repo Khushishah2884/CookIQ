@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const SignUp = () => {
   const [form, setForm] = useState({
@@ -8,15 +8,33 @@ const SignUp = () => {
     password: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Here you would send form data to your backend
-    setSubmitted(true);
+    setError('');
+    try {
+      const res = await fetch('http://localhost:5000/api/users/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSubmitted(true);
+        localStorage.setItem('user', JSON.stringify(data.user)); // Store user info
+        navigate('/'); // Redirect to home page
+      } else {
+        setError(data.message || 'Sign up failed');
+      }
+    } catch (err) {
+      setError('Server error');
+    }
   };
 
   return (
@@ -64,11 +82,13 @@ const SignUp = () => {
                 minLength={6}
               />
             </div>
+            {error && (
+              <div style={{ color: 'red', marginBottom: 8, textAlign: 'center' }}>{error}</div>
+            )}
             <button className="btn btn-primary w-full" type="submit">
               Sign Up
             </button>
             <div style={{ textAlign: 'center', marginTop: 16 }}>
-              {/* Add sign in link */}
               <span>Already have an account? </span>
               <Link to="/signin" style={{ color: '#667eea', fontWeight: 600, textDecoration: 'none' }}>
                 Sign In

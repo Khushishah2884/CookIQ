@@ -243,3 +243,6 @@ const RecipeGenerator = ({ onRecipeGenerated }) => {
 };
 
 export default RecipeGenerator;
+
+// Make sure you have a form or button that triggers recipe generation
+// and calls props.onRecipeGenerated with the result
