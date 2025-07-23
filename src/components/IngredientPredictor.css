@@ -1,0 +1,277 @@
+.ingredient-predictor {
+  padding: 40px 0 80px;
+  min-height: calc(100vh - 80px);
+}
+
+.predictor-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.predictor-content {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 48px;
+  align-items: start;
+}
+
+.predictor-form {
+  padding: 32px;
+}
+
+.autocomplete-container {
+  position: relative;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.suggestion-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.suggestion-item:hover {
+  background-color: #f8f9fa;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.scaling-info {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.scaling-factor {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scaling-label {
+  font-weight: 500;
+}
+
+.scaling-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.ml-info {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.ml-info h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.ml-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.ml-stat {
+  text-align: center;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.ml-info p {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.features-info {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.features-info h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.features-list {
+  list-style: none;
+  padding: 0;
+}
+
+.features-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.features-list li:last-child {
+  border-bottom: none;
+}
+
+.feature-icon {
+  font-size: 1.2rem;
+  margin-top: 2px;
+}
+
+.features-list strong {
+  color: #333;
+  font-size: 14px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.features-list p {
+  color: #666;
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.popular-dishes {
+  padding: 24px;
+}
+
+.popular-dishes h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.dishes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.dish-tag {
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.dish-tag:hover {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+@media (max-width: 1024px) {
+  .predictor-content {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .predictor-info-section {
+    order: -1;
+  }
+  
+  .ml-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .dishes-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .ingredient-predictor {
+    padding: 20px 0 40px;
+  }
+  
+  .predictor-form {
+    padding: 24px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .ml-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  
+  .dishes-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .predictor-form {
+    padding: 20px;
+  }
+  
+  .scaling-factor {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+  
+  .ml-stats {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .dishes-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .features-list li {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .feature-icon {
+    align-self: flex-start;
+  }
+}
