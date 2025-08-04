@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const SignUp = () => {
   const [form, setForm] = useState({
@@ -8,15 +8,37 @@ const SignUp = () => {
     password: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Here you would send form data to your backend
-    setSubmitted(true);
+    setError(null);
+    try {
+      const response = await fetch('http://localhost:5000/api/users/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(form)
+      });
+
+      if (response.ok) {
+        setSubmitted(true);
+        // Redirect to signin page after successful signup
+        navigate('/signin');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Signup failed');
+      }
+    } catch (err) {
+      console.error('Error during signup:', err);
+      setError('Network error during signup');
+    }
   };
 
   return (
@@ -29,6 +51,11 @@ const SignUp = () => {
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
+            {error && (
+              <div style={{ textAlign: 'center', color: 'red', marginBottom: 16 }}>
+                {error}
+              </div>
+            )}
             <div className="form-group">
               <label className="form-label">Name</label>
               <input
@@ -68,7 +95,6 @@ const SignUp = () => {
               Sign Up
             </button>
             <div style={{ textAlign: 'center', marginTop: 16 }}>
-              {/* Add sign in link */}
               <span>Already have an account? </span>
               <Link to="/signin" style={{ color: '#667eea', fontWeight: 600, textDecoration: 'none' }}>
                 Sign In
