@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 const SignIn = () => {
   const [form, setForm] = useState({ email: '', password: '' });
-<<<<<<< HEAD
   const [error, setError] = useState('');
-=======
->>>>>>> 12431d1efb78da7502933c779046a660651d0d9b
   const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
 
@@ -14,9 +11,8 @@ const SignIn = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-<<<<<<< HEAD
     setError('');
     try {
       const res = await fetch('http://localhost:5000/api/users/signin', {
@@ -37,11 +33,6 @@ const SignIn = () => {
     } catch (err) {
       setError('Server error');
     }
-=======
-    // Here you would handle sign in logic
-    setSubmitted(true);
-    navigate('/signin'); // Redirect to sign in page after submit
->>>>>>> 12431d1efb78da7502933c779046a660651d0d9b
   };
 
   return (
@@ -78,14 +69,12 @@ const SignIn = () => {
                 minLength={6}
               />
             </div>
-<<<<<<< HEAD
             {error && (
               <div style={{ color: 'red', textAlign: 'center', marginBottom: 12 }}>
                 {error}
               </div>
             )}
-=======
->>>>>>> 12431d1efb78da7502933c779046a660651d0d9b
+
             <button className="btn btn-primary w-full" type="submit">
               Sign In
             </button>

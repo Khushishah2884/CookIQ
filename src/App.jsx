@@ -9,6 +9,7 @@ import Chatbot from './components/Chatbot';
 import Footer from './components/Footer';
 import SignUp from './components/SignUp';
 import SignIn from './components/SignIn';
+import Profile from './components/Profile';
 import './App.css';
 
 function App() {
@@ -48,10 +49,7 @@ function App() {
           />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/signin" element={<SignIn />} />
-<<<<<<< HEAD
           <Route path="/profile" element={<Profile onModuleChange={handleModuleChange} />} />
-=======
->>>>>>> 12431d1efb78da7502933c779046a660651d0d9b
           {/* Add more routes as needed */}
         </Routes>
       </main>

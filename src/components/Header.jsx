@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './Header.css';
 
 const Header = ({ onModuleChange, activeModule }) => {

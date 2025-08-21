@@ -11,15 +11,12 @@
     "eject": "react-scripts eject"
   },
   "dependencies": {
-<<<<<<< HEAD
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.16.4",
-=======
->>>>>>> 12431d1efb78da7502933c779046a660651d0d9b
+    "mongoose": "^8.17.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.7.0",
