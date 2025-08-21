@@ -9,13 +9,13 @@ const RecipeGenerator = ({ onRecipeGenerated }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const cuisineOptions = [
-    'Italian', 'Chinese', 'Indian', 'Mexican', 'French', 
-    'Japanese', 'Thai', 'Mediterranean', 'American', 'Korean'
+    'Andhra Pradesh', 'Bengali', 'Bihari','East', 'Gujarati', 'Hyderabadi', 
+    'Karnataka', 'Kashmiri', 'Kerala', 'Madhya Pradesh', 'Maharastrian','Marwari','Rajasthani','Sindhi',
+    'Tamil Nadu','Uttar Pradesh','Punjabi','Indian',
   ];
 
   const dietaryOptions = [
-    'Vegetarian', 'Vegan', 'Gluten-Free', 'Dairy-Free', 
-    'Keto', 'Low-Carb', 'High-Protein', 'Paleo'
+    'Vegetarian', 'Non-Vegetarian'
   ];
 
   const handleDietaryChange = (option) => {
@@ -243,6 +243,3 @@ const RecipeGenerator = ({ onRecipeGenerated }) => {
 };
 
 export default RecipeGenerator;
-
-// Make sure you have a form or button that triggers recipe generation
-// and calls props.onRecipeGenerated with the result

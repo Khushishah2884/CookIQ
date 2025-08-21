@@ -7,8 +7,8 @@ const SignUp = () => {
     email: '',
     password: ''
   });
-  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -19,19 +19,22 @@ const SignUp = () => {
     e.preventDefault();
     setError('');
     try {
+      // Change the API URL to point to your backend server
       const res = await fetch('http://localhost:5000/api/users/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
       });
       const data = await res.json();
-      if (res.ok) {
-        setSubmitted(true);
-        localStorage.setItem('user', JSON.stringify(data.user)); // Store user info
-        navigate('/'); // Redirect to home page
-      } else {
-        setError(data.message || 'Sign up failed');
+      if (!res.ok) {
+        setError(data.message || 'Signup failed');
+        return;
       }
+      localStorage.setItem('token', data.token);
+      setSubmitted(true);
+      setTimeout(() => {
+        navigate('/');
+      }, 1200);
     } catch (err) {
       setError('Server error');
     }
@@ -43,7 +46,7 @@ const SignUp = () => {
         <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Sign Up</h2>
         {submitted ? (
           <div style={{ textAlign: 'center', color: '#667eea', fontWeight: 600 }}>
-            Thank you for signing up!
+            Thank you for signing up! Redirecting to home...
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -83,7 +86,9 @@ const SignUp = () => {
               />
             </div>
             {error && (
-              <div style={{ color: 'red', marginBottom: 8, textAlign: 'center' }}>{error}</div>
+              <div style={{ color: 'red', textAlign: 'center', marginBottom: 12 }}>
+                {error}
+              </div>
             )}
             <button className="btn btn-primary w-full" type="submit">
               Sign Up

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import Header from './components/Header';
-import Hero from './components/Hero';
-import RecipeGenerator from './components/RecipeGenerator';
-import IngredientPredictor from './components/IngredientPredictor';
-import RecipeResults from './components/RecipeResults';
-import Chatbot from './components/Chatbot';
-import Footer from './components/Footer';
-import SignUp from './components/SignUp';
-import SignIn from './components/SignIn';
+import Header from '../../src/components/Header';
+import Hero from '../../src/components/Hero';
+import RecipeGenerator from '../../src/components/RecipeGenerator';
+import IngredientPredictor from '../../src/components/IngredientPredictor';
+import RecipeResults from '../../src/components/RecipeResults';
+import Chatbot from '../../src/components/Chatbot';
+import Footer from '../../src/components/Footer';
+import SignUp from '../../src/components/SignUp';
+import SignIn from '../../src/components/SignIn';
+import Profile from '../../src/components/Profile';
 import './App.css';
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
           />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/signin" element={<SignIn />} />
+          <Route path="/profile" element={<Profile />} />
           {/* Add more routes as needed */}
         </Routes>
       </main>

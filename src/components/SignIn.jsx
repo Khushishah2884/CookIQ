@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 const SignIn = () => {
   const [form, setForm] = useState({ email: '', password: '' });
-  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -18,16 +18,18 @@ const SignIn = () => {
       const res = await fetch('http://localhost:5000/api/users/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(form)
       });
       const data = await res.json();
-      if (res.ok) {
-        setSubmitted(true);
-        localStorage.setItem('user', JSON.stringify(data.user)); // Store user info
-        navigate('/'); // Redirect to home page on success
-      } else {
-        setError(data.message || 'Invalid email or password');
+      if (!res.ok) {
+        setError(data.message || 'Sign in failed');
+        return;
       }
+      localStorage.setItem('token', data.token);
+      setSubmitted(true);
+      setTimeout(() => {
+        navigate('/');
+      }, 1200);
     } catch (err) {
       setError('Server error');
     }
@@ -39,7 +41,7 @@ const SignIn = () => {
         <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Sign In</h2>
         {submitted ? (
           <div style={{ textAlign: 'center', color: '#667eea', fontWeight: 600 }}>
-            Signed in successfully!
+            Signed in successfully! Redirecting to home...
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -68,7 +70,9 @@ const SignIn = () => {
               />
             </div>
             {error && (
-              <div style={{ color: 'red', marginBottom: 8, textAlign: 'center' }}>{error}</div>
+              <div style={{ color: 'red', textAlign: 'center', marginBottom: 12 }}>
+                {error}
+              </div>
             )}
             <button className="btn btn-primary w-full" type="submit">
               Sign In

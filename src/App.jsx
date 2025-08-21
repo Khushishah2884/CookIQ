@@ -51,7 +51,7 @@ function App() {
           <Route path="/ingredient-predictor" element={<IngredientPredictor onRecipeGenerated={handleRecipeGenerated} />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/signin" element={<SignIn />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile" element={<Profile onModuleChange={handleModuleChange} />} />
           {/* Add more routes as needed */}
         </Routes>
       </main>
