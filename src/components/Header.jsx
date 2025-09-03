@@ -4,9 +4,9 @@ import './Header.css';
 
 const Header = ({ onModuleChange, activeModule }) => {
   const navItems = [
-    { id: 'home', label: 'Home', icon: '🏠' },
-    { id: 'recipe-generator', label: 'Recipe Generator', icon: '🍳' },
-    { id: 'ingredient-predictor', label: 'Ingredient Predictor', icon: '📊' }
+    { id: 'home', label: 'Home', icon: '🏠', path: '/' },
+    { id: 'recipe-generator', label: 'Recipe Generator', icon: '🍳', path: '/recipe-generator' },
+    { id: 'ingredient-predictor', label: 'Ingredient Predictor', icon: '📊', path: '/ingredient-predictor' }
   ];
   const navigate = useNavigate();
   const location = useLocation();
@@ -17,6 +17,7 @@ const Header = ({ onModuleChange, activeModule }) => {
     if (location.pathname === '/') return 'home';
     if (location.pathname.startsWith('/recipe-generator')) return 'recipe-generator';
     if (location.pathname.startsWith('/ingredient-predictor')) return 'ingredient-predictor';
+    if (location.pathname.startsWith('/profile')) return 'profile'; // <-- Add this line
     return activeModule;
   };
   const currentActive = getActiveNav();
@@ -45,41 +46,55 @@ const Header = ({ onModuleChange, activeModule }) => {
               </button>
             ))}
             {user ? (
-              <button
-                className="profile-btn"
-                onClick={() => navigate('/profile')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  marginLeft: 8
-                }}
-              >
-                <span
+              <>
+                <button
+                  className="profile-btn"
+                  onClick={() => navigate('/profile')}
                   style={{
-                    display: 'inline-flex',
+                    display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 36,
-                    height: 36,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    fontWeight: 700,
-                    fontSize: 18,
-                    marginRight: 8,
-                    textTransform: 'uppercase'
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    marginLeft: 8
                   }}
                 >
-                  {user.name ? user.name.charAt(0) : 'U'}
-                </span>
-                <span style={{ fontWeight: 600, color: '#333', fontSize: 16 }}>
-                  {user.name}
-                </span>
-              </button>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      fontWeight: 700,
+                      fontSize: 18,
+                      marginRight: 8,
+                      textTransform: 'uppercase'
+                    }}
+                  >
+                    {user.name ? user.name.charAt(0) : 'U'}
+                  </span>
+                  <span style={{ fontWeight: 600, color: '#333', fontSize: 16 }}>
+                    {user.name}
+                  </span>
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ marginLeft: 8 }}
+                  onClick={() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    navigate('/');
+                    window.location.reload();
+                  }}
+                >
+                  Log Out
+                </button>
+              </>
             ) : (
               <Link className="btn btn-primary" to="/signup" style={{ marginLeft: 8 }}>
                 Sign Up

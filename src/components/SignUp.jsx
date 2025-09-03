@@ -31,6 +31,7 @@ const SignUp = () => {
         return;
       }
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user)); // <-- Add this line
       setSubmitted(true);
       setTimeout(() => {
         navigate('/');
@@ -108,4 +109,3 @@ const SignUp = () => {
 };
 
 export default SignUp;
-    

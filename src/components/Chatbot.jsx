@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './Chatbot.css';
 
+// Replace with your Gemini API endpoint and key
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_KEY = 'AIzaSyCqa9lQdRsCcJrGduoWKSTtGFyH5X2YqaE';
+
 const Chatbot = ({ isOpen, onToggle }) => {
   const [messages, setMessages] = useState([
     {
@@ -12,7 +16,9 @@ const Chatbot = ({ isOpen, onToggle }) => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   const quickActions = [
     { text: "Recipe suggestions", icon: "🍳" },
@@ -29,31 +35,31 @@ const Chatbot = ({ isOpen, onToggle }) => {
     scrollToBottom();
   }, [messages]);
 
-  const generateBotResponse = (userMessage) => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    if (lowerMessage.includes('recipe') || lowerMessage.includes('cook')) {
-      return "I'd love to help you find a recipe! What ingredients do you have available? Or are you looking for a specific type of cuisine? 🍽️";
-    } else if (lowerMessage.includes('substitute') || lowerMessage.includes('replace')) {
-      return "Great question about substitutions! What ingredient are you looking to substitute? I can suggest alternatives based on what you're cooking. 🔄";
-    } else if (lowerMessage.includes('time') || lowerMessage.includes('how long')) {
-      return "Cooking times can vary! What dish are you preparing? I can give you specific timing guidelines and tips to know when it's perfectly done. ⏰";
-    } else if (lowerMessage.includes('healthy') || lowerMessage.includes('nutrition')) {
-      return "I love helping with healthy cooking! Are you looking for low-calorie options, high-protein meals, or specific dietary requirements? 🥗";
-    } else if (lowerMessage.includes('beginner') || lowerMessage.includes('easy')) {
-      return "Perfect! I have lots of beginner-friendly recipes. Would you prefer something that takes under 30 minutes, or are you interested in learning basic cooking techniques? 👶‍🍳";
-    } else if (lowerMessage.includes('spicy') || lowerMessage.includes('hot')) {
-      return "Spicy food lover! 🌶️ What's your heat tolerance level? I can suggest recipes from mild to extremely hot, and share tips on how to balance spice levels.";
-    } else if (lowerMessage.includes('dessert') || lowerMessage.includes('sweet')) {
-      return "Sweet treats coming up! 🍰 Are you in the mood for something chocolatey, fruity, or maybe a classic comfort dessert? I can also suggest no-bake options!";
-    } else if (lowerMessage.includes('vegetarian') || lowerMessage.includes('vegan')) {
-      return "Excellent choice for plant-based cooking! 🌱 Are you looking for protein-rich meals, comfort food alternatives, or maybe some creative veggie dishes?";
-    } else if (lowerMessage.includes('quick') || lowerMessage.includes('fast')) {
-      return "Need something quick? ⚡ I can suggest 15-minute meals, one-pot dishes, or prep-ahead options. What type of meal are you thinking?";
-    } else if (lowerMessage.includes('thank') || lowerMessage.includes('thanks')) {
-      return "You're very welcome! I'm always here to help make your cooking adventures more delicious and fun! 😊 Anything else you'd like to know?";
-    } else {
-      return "That's interesting! I'm here to help with all things cooking. Feel free to ask me about recipes, ingredients, techniques, or any cooking challenges you're facing! 👨‍🍳✨";
+  // Gemini API integration
+  const fetchGeminiResponse = async (userMessage) => {
+    try {
+      const res = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-goog-api-key': GEMINI_API_KEY
+        },
+        body: JSON.stringify({
+          contents: [
+            { parts: [{ text: userMessage }] }
+          ]
+        })
+      });
+      if (!res.ok) {
+        return `Gemini API error: ${res.status} ${res.statusText}`;
+      }
+      const data = await res.json();
+      return (
+        data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "Sorry, I couldn't get a response from Gemini."
+      );
+    } catch (err) {
+      return "Sorry, there was an error connecting to Gemini API.";
     }
   };
 
@@ -71,18 +77,18 @@ const Chatbot = ({ isOpen, onToggle }) => {
     setInputMessage('');
     setIsTyping(true);
 
-    // Simulate typing delay
-    setTimeout(() => {
-      const botResponse = {
-        id: Date.now() + 1,
-        type: 'bot',
-        content: generateBotResponse(messageText),
-        timestamp: new Date()
-      };
+    // Get Gemini API response
+    const botReply = await fetchGeminiResponse(messageText);
 
-      setMessages(prev => [...prev, botResponse]);
-      setIsTyping(false);
-    }, 1000 + Math.random() * 1000);
+    const botResponse = {
+      id: Date.now() + 1,
+      type: 'bot',
+      content: botReply,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, botResponse]);
+    setIsTyping(false);
   };
 
   const handleKeyPress = (e) => {
@@ -94,6 +100,32 @@ const Chatbot = ({ isOpen, onToggle }) => {
 
   const formatTime = (timestamp) => {
     return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  useEffect(() => {
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognitionRef.current = new SpeechRecognition();
+    recognitionRef.current.continuous = false;
+    recognitionRef.current.interimResults = false;
+    recognitionRef.current.lang = 'en-US';
+
+    recognitionRef.current.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInputMessage(transcript);
+      setIsListening(false);
+    };
+
+    recognitionRef.current.onend = () => {
+      setIsListening(false);
+    };
+  }, []);
+
+  const startListening = () => {
+    if (recognitionRef.current) {
+      setIsListening(true);
+      recognitionRef.current.start();
+    }
   };
 
   return (
@@ -173,6 +205,15 @@ const Chatbot = ({ isOpen, onToggle }) => {
             disabled={!inputMessage.trim()}
           >
             <span className="send-icon">➤</span>
+          </button>
+          <button
+            className="voice-button"
+            style={{ marginLeft: 8 }}
+            onClick={startListening}
+            disabled={isListening}
+            title="Speak your question"
+          >
+            {isListening ? '🎤 Listening...' : '🎤'}
           </button>
         </div>
       </div>

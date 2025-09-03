@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import RecipeGenerator from './components/RecipeGenerator';
@@ -16,14 +16,20 @@ function App() {
   const [activeModule, setActiveModule] = useState('home');
   const [recipeData, setRecipeData] = useState(null);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleModuleChange = (module) => {
     setActiveModule(module);
+    if (module === 'recipe-generator') navigate('/recipe-generator');
+    else if (module === 'ingredient-predictor') navigate('/ingredient-predictor');
+    else if (module === 'home') navigate('/');
+    else if (module === 'profile') navigate('/profile');
   };
 
   const handleRecipeGenerated = (data) => {
     setRecipeData(data);
     setActiveModule('results');
+    navigate('/results');
   };
 
   return (
@@ -33,23 +39,33 @@ function App() {
         <Routes>
           <Route
             path="/"
-            element={
-              activeModule === 'home' ? (
-                <Hero onModuleChange={handleModuleChange} />
-              ) : activeModule === 'recipe-generator' ? (
-                <RecipeGenerator onRecipeGenerated={handleRecipeGenerated} />
-              ) : activeModule === 'ingredient-predictor' ? (
-                <IngredientPredictor onRecipeGenerated={handleRecipeGenerated} />
-              ) : activeModule === 'results' && recipeData ? (
-                <RecipeResults data={recipeData} />
-              ) : (
-                <Hero onModuleChange={handleModuleChange} />
-              )
-            }
+            element={<Hero onModuleChange={handleModuleChange} />}
           />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/profile" element={<Profile onModuleChange={handleModuleChange} />} />
+          <Route
+            path="/recipe-generator"
+            element={
+              <RecipeGenerator
+                onRecipeGenerated={handleRecipeGenerated}
+              />
+            }
+          />
+          <Route
+            path="/ingredient-predictor"
+            element={
+              <IngredientPredictor
+                onRecipeGenerated={handleRecipeGenerated}
+              />
+            }
+          />
+          <Route
+            path="/results"
+            element={
+              recipeData ? <RecipeResults data={recipeData} /> : <Hero onModuleChange={handleModuleChange} />
+            }
+          />
           {/* Add more routes as needed */}
         </Routes>
       </main>

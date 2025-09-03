@@ -123,4 +123,4 @@ const Profile = ({ onModuleChange }) => {
 };
 
 export default Profile;
-            
+              
