@@ -8,6 +8,7 @@ const Profile = ({ onModuleChange }) => {
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
+  // Only call onModuleChange('profile') on mount
   useEffect(() => {
     if (onModuleChange) onModuleChange('profile');
     // Fetch details of the currently signed-in user
@@ -22,7 +23,8 @@ const Profile = ({ onModuleChange }) => {
         setForm({ name: data.name, email: data.email });
       })
       .catch(() => setMessage('Failed to fetch user details'));
-  }, [onModuleChange]);
+    // eslint-disable-next-line
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -123,4 +125,3 @@ const Profile = ({ onModuleChange }) => {
 };
 
 export default Profile;
-              

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import RecipeGenerator from './components/RecipeGenerator';
@@ -17,6 +17,15 @@ function App() {
   const [recipeData, setRecipeData] = useState(null);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname === '/') setActiveModule('home');
+    else if (location.pathname.startsWith('/recipe-generator')) setActiveModule('recipe-generator');
+    else if (location.pathname.startsWith('/ingredient-predictor')) setActiveModule('ingredient-predictor');
+    else if (location.pathname.startsWith('/profile')) setActiveModule('profile');
+    else if (location.pathname.startsWith('/results')) setActiveModule('results');
+  }, [location.pathname]);
 
   const handleModuleChange = (module) => {
     setActiveModule(module);
