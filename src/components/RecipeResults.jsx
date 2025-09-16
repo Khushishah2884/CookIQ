@@ -2,166 +2,257 @@ import React, { useState } from 'react';
 import './RecipeResults.css';
 
 const RecipeResults = ({ data }) => {
-  const [selectedRecipe, setSelectedRecipe] = useState(null);
-  const [userRating, setUserRating] = useState(0);
-  const [feedback, setFeedback] = useState('');
-  const [showFeedback, setShowFeedback] = useState(false);
+  // State for "view more" modal and pagination
+  const [modalRecipe, setModalRecipe] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(12);
 
-  const handleRating = (rating) => {
-    setUserRating(rating);
-    setShowFeedback(true);
+  // Infinite scroll: load more on scroll to bottom
+  React.useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 &&
+        visibleCount < (data.recipes?.length || data.dishes?.length || 0)
+      ) {
+        setVisibleCount((prev) => prev + 12);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [visibleCount, data]);
+
+  // Helper to get list of recipes/dishes
+  const getList = () => {
+    if (data.type === 'recipe-generation') return data.recipes || [];
+    if (data.type === 'cuisine-dishes') return data.dishes || [];
+    return [];
   };
 
-  const submitFeedback = () => {
-    // Here you would send feedback to your backend
-    console.log('Feedback submitted:', { rating: userRating, feedback });
-    setShowFeedback(false);
-    setUserRating(0);
-    setFeedback('');
+  const list = getList();
+  const showList = list.slice(0, visibleCount);
+
+  // Modal view for full recipe
+  const renderModal = () => {
+    if (!modalRecipe) return null;
+    // Helper to split and clean instructions into steps
+    const getInstructionSteps = (instructions) => {
+      if (Array.isArray(instructions)) {
+        return instructions.filter(
+          (step) => typeof step === 'string' && step.trim() !== ''
+        );
+      }
+      // Split by newlines or ". " and filter empty/whitespace
+      return String(instructions || '')
+        .split(/(?:\r?\n)+|\. +/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+    };
+
+    const steps = getInstructionSteps(modalRecipe.instructions);
+
+    return (
+      <div className="modal-overlay" style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <div
+          className="modal-content card"
+          style={{
+            maxWidth: 540,
+            width: '100%',
+            background: 'linear-gradient(135deg, #fff 80%, #e3eaff 100%)',
+            padding: 0,
+            borderRadius: 16,
+            position: 'relative',
+            boxShadow: '0 8px 32px rgba(102,126,234,0.18), 0 1.5px 8px rgba(118,75,162,0.10)'
+          }}
+        >
+          <button
+            style={{
+              position: 'absolute', top: 16, right: 20, background: 'none', border: 'none', fontSize: 26, cursor: 'pointer', color: '#667eea'
+            }}
+            onClick={() => setModalRecipe(null)}
+            aria-label="Close"
+          >✕</button>
+          <div
+            style={{
+              maxHeight: 520,
+              overflowY: 'auto',
+              padding: '32px 28px 24px 28px',
+              borderRadius: 16,
+              scrollbarWidth: 'thin'
+            }}
+          >
+            <h2 style={{ marginBottom: 10, color: '#764ba2', fontWeight: 700, fontSize: 28 }}>
+              {modalRecipe.dish_name || modalRecipe.name || modalRecipe.title}
+            </h2>
+            <div style={{ marginBottom: 12, color: '#667eea', fontWeight: 500 }}>
+              <span style={{ marginRight: 18 }}>
+                <strong>Cuisine:</strong> {modalRecipe.cuisine || 'N/A'}
+              </span>
+              <span>
+                <strong>Servings:</strong> {modalRecipe.servings || modalRecipe.servings_scaled_to || 'N/A'}
+              </span>
+            </div>
+            <div style={{ marginBottom: 10, color: '#333' }}>
+              <span style={{ marginRight: 18 }}>
+                <strong>Time:</strong> {modalRecipe.time_to_prepare_minutes ? `${modalRecipe.time_to_prepare_minutes} min` : modalRecipe.cookTime || 'N/A'}
+              </span>
+              <span>
+                <strong>Difficulty:</strong> {modalRecipe.difficulty || modalRecipe.type || 'N/A'}
+              </span>
+            </div>
+            {modalRecipe.image && (
+              <img src={modalRecipe.image} alt="Recipe" style={{ width: '100%', borderRadius: 10, marginBottom: 18, boxShadow: '0 2px 12px #e3eaff' }} />
+            )}
+            <div style={{ marginBottom: 18 }}>
+              <strong style={{ color: '#764ba2', fontSize: 18 }}>Ingredients:</strong>
+              <ul style={{ margin: '10px 0 0 18px', color: '#222', fontSize: 16 }}>
+                {(modalRecipe.ingredients || []).map((ing, idx) => (
+                  <li key={idx} style={{ marginBottom: 3 }}>
+                    <span style={{ fontWeight: 500 }}>{ing.ingredient || ing.name}</span>
+                    {ing.quantity || ing.amount ? (
+                      <span style={{ color: '#667eea', marginLeft: 8 }}>
+                        {ing.quantity || ing.amount} {ing.unit || ''}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <strong style={{ color: '#764ba2', fontSize: 18 }}>Instructions:</strong>
+              <div style={{ marginTop: 6, color: '#222', fontSize: 16, lineHeight: 1.7 }}>
+                <ol style={{ paddingLeft: 20 }}>
+                  {steps.map((step, idx) => (
+                    <li key={idx} style={{
+                      marginBottom: 10,
+                      background: '#f6f8ff',
+                      borderRadius: 6,
+                      padding: '10px 14px',
+                      boxShadow: '0 1px 4px #e3eaff',
+                      color: '#333',
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'flex-start'
+                    }}>
+                      <span style={{
+                        display: 'inline-block',
+                        minWidth: 28,
+                        minHeight: 28,
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: '#fff',
+                        borderRadius: '50%',
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        fontSize: 16,
+                        marginRight: 12,
+                        verticalAlign: 'middle',
+                        lineHeight: '28px',
+                        flexShrink: 0
+                      }}>{idx + 1}</span>
+                      <span style={{ flex: 1 }}>{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+            <button
+              className="btn btn-secondary"
+              style={{
+                marginTop: 18,
+                width: '100%',
+                background: 'linear-gradient(90deg,#667eea 0%,#764ba2 100%)',
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: 18,
+                border: 'none',
+                borderRadius: 8,
+                boxShadow: '0 2px 8px #e3eaff'
+              }}
+              onClick={() => setModalRecipe(null)}
+            >
+              ← Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  if (data.type === 'recipe-generation') {
+  // Main render
+  if (data.type === 'cuisine-dishes' || data.type === 'recipe-generation') {
     return (
       <section className="recipe-results">
         <div className="container">
           <div className="results-header">
-            <h1 className="page-title">🍳 Recipe Suggestions</h1>
+            <h1 className="page-title">
+              {data.type === 'cuisine-dishes'
+                ? `🍽️ ${data.cuisine} Dishes`
+                : '✨ Recipe Results'}
+            </h1>
             <p className="page-subtitle">
-              Found {data.totalFound} recipes using your ingredients: "{data.query}"
+              {data.type === 'cuisine-dishes'
+                ? `Here are some popular dishes from ${data.cuisine} cuisine:`
+                : `We found ${list.length} recipes for you!`}
             </p>
           </div>
-
           <div className="recipes-grid">
-            {data.recipes.map(recipe => (
-              <div key={recipe.id} className="recipe-card card">
-                <div className="recipe-image">
-                  <img src={recipe.image} alt={recipe.name} />
-                  <div className="recipe-rating">
-                    <span className="rating-star">⭐</span>
-                    <span className="rating-value">{recipe.rating}</span>
-                  </div>
-                </div>
-                
+            {showList.length === 0 && (
+              <div>No recipes found.</div>
+            )}
+            {showList.map((dish, idx) => (
+              <div key={dish._id || dish.id || idx} className="recipe-card card">
                 <div className="recipe-content">
-                  <h3 className="recipe-title">{recipe.name}</h3>
-                  
+                  <h3 className="recipe-title">{dish.dish_name || dish.name || dish.title}</h3>
                   <div className="recipe-meta">
                     <span className="meta-item">
                       <span className="meta-icon">⏱️</span>
-                      {recipe.cookTime}
+                      {dish.time_to_prepare_minutes ? `${dish.time_to_prepare_minutes} min` : dish.cookTime || 'N/A'}
                     </span>
                     <span className="meta-item">
-                      <span className="meta-icon">👨‍🍳</span>
-                      {recipe.difficulty}
+                      <span className="meta-icon">👥</span>
+                      {dish.servings || dish.servings_scaled_to || 'N/A'} servings
                     </span>
                   </div>
-
                   <div className="ingredients-preview">
                     <h4>Ingredients:</h4>
                     <div className="ingredients-list">
-                      {recipe.ingredients.slice(0, 3).map((ingredient, index) => (
-                        <div key={index} className={`ingredient-item ${ingredient.available ? 'available' : 'missing'}`}>
-                          <span className="ingredient-name">{ingredient.name}</span>
-                          <span className="ingredient-amount">{ingredient.amount}</span>
+                      {(dish.ingredients || []).slice(0, 3).map((ingredient, i) => (
+                        <div key={i} className="ingredient-item">
+                          <span className="ingredient-name">{ingredient.ingredient || ingredient.name}</span>
+                          <span className="ingredient-amount">{ingredient.quantity || ingredient.amount} {ingredient.unit || ''}</span>
                         </div>
                       ))}
-                      {recipe.ingredients.length > 3 && (
+                      {dish.ingredients && dish.ingredients.length > 3 && (
                         <div className="more-ingredients">
-                          +{recipe.ingredients.length - 3} more
+                          +{dish.ingredients.length - 3} more
                         </div>
                       )}
                     </div>
                   </div>
-
-                  <button 
-                    className="btn btn-primary w-full"
-                    onClick={() => setSelectedRecipe(recipe)}
+                  <button
+                    className="btn btn-primary"
+                    style={{ marginTop: 12 }}
+                    onClick={() => setModalRecipe(dish)}
                   >
-                    View Full Recipe
+                    View More
                   </button>
                 </div>
               </div>
             ))}
           </div>
-
-          {/* Recipe Modal */}
-          {selectedRecipe && (
-            <div className="recipe-modal-overlay" onClick={() => setSelectedRecipe(null)}>
-              <div className="recipe-modal" onClick={e => e.stopPropagation()}>
-                <button 
-                  className="modal-close"
-                  onClick={() => setSelectedRecipe(null)}
-                >
-                  ✕
-                </button>
-                
-                <div className="modal-content">
-                  <div className="modal-header">
-                    <img src={selectedRecipe.image} alt={selectedRecipe.name} />
-                    <div className="modal-title-section">
-                      <h2>{selectedRecipe.name}</h2>
-                      <div className="recipe-meta">
-                        <span className="meta-item">⏱️ {selectedRecipe.cookTime}</span>
-                        <span className="meta-item">👨‍🍳 {selectedRecipe.difficulty}</span>
-                        <span className="meta-item">⭐ {selectedRecipe.rating}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="modal-body">
-                    <div className="ingredients-section">
-                      <h3>Ingredients</h3>
-                      <div className="ingredients-list">
-                        {selectedRecipe.ingredients.map((ingredient, index) => (
-                          <div key={index} className={`ingredient-item ${ingredient.available ? 'available' : 'missing'}`}>
-                            <span className="ingredient-name">{ingredient.name}</span>
-                            <span className="ingredient-amount">{ingredient.amount}</span>
-                            <span className="availability-indicator">
-                              {ingredient.available ? '✅' : '❌'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="instructions-section">
-                      <h3>Instructions</h3>
-                      <ol className="instructions-list">
-                        {selectedRecipe.instructions.map((step, index) => (
-                          <li key={index} className="instruction-step">
-                            {step}
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-
-                    <div className="nutrition-section">
-                      <h3>Nutrition (per serving)</h3>
-                      <div className="nutrition-grid">
-                        <div className="nutrition-item">
-                          <span className="nutrition-value">{selectedRecipe.nutrition.calories}</span>
-                          <span className="nutrition-label">Calories</span>
-                        </div>
-                        <div className="nutrition-item">
-                          <span className="nutrition-value">{selectedRecipe.nutrition.protein}g</span>
-                          <span className="nutrition-label">Protein</span>
-                        </div>
-                        <div className="nutrition-item">
-                          <span className="nutrition-value">{selectedRecipe.nutrition.carbs}g</span>
-                          <span className="nutrition-label">Carbs</span>
-                        </div>
-                        <div className="nutrition-item">
-                          <span className="nutrition-value">{selectedRecipe.nutrition.fat}g</span>
-                          <span className="nutrition-label">Fat</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {visibleCount < list.length && (
+            <div style={{ textAlign: 'center', margin: '24px 0' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setVisibleCount(visibleCount + 12)}
+              >
+                Load More
+              </button>
             </div>
           )}
         </div>
+        {renderModal()}
       </section>
     );
   }

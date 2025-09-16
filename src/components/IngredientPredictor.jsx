@@ -11,6 +11,12 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [error, setError] = useState('');
 
+  const cuisineOptions = [
+    'Andhra Pradesh', 'Bengali', 'Bihari','East', 'Gujarati', 'Hyderabadi', 
+    'Karnataka', 'Kashmiri', 'Kerala', 'Madhya Pradesh', 'Maharashtrian','Marwari','Rajasthani','Sindhi',
+    'Tamil Nadu','Uttar Pradesh','Punjabi','Indian',
+  ];
+
   // GET /search?query=
   async function searchRecipes(query) {
     const res = await fetch('http://localhost:8000/search?query=' + encodeURIComponent(query) + '&limit=8');
@@ -45,12 +51,18 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
 
   const handleCuisineChange = (e) => {
     setCuisine(e.target.value);
+    setSuggestions([]); // clear suggestions when cuisine changes
   };
 
   const selectSuggestion = (suggestion) => {
     setDishName(suggestion);
     setSuggestions([]);
     // Do NOT fetch or show recipe here. Let user enter servings and submit.
+  };
+
+  const fetchDishesByCuisine = async (cuisine) => {
+    const res = await fetch('http://localhost:8000/dishes?cuisine=' + encodeURIComponent(cuisine));
+    return res.json();
   };
 
   const handleSubmit = async (e) => {
@@ -63,14 +75,19 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
       let data;
       if (searchMode === 'dish') {
         data = await getRecipeByName(dishName, servings);
-      } else {
-        // For cuisine, you may want to implement a similar endpoint or logic
-        setError('Cuisine-based prediction not implemented.');
         setIsLoading(false);
-        return;
+        onRecipeGenerated(data);
+      } else {
+        // Fetch dishes for the selected cuisine
+        const result = await fetchDishesByCuisine(cuisine);
+        setIsLoading(false);
+        // Format for RecipeResults: type: 'cuisine-dishes', cuisine, dishes: []
+        onRecipeGenerated({
+          type: 'cuisine-dishes',
+          cuisine,
+          dishes: result.dishes || []
+        });
       }
-      setIsLoading(false);
-      onRecipeGenerated(data);
     } catch (err) {
       setError('Server error');
       setIsLoading(false);
@@ -161,14 +178,17 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                     <span className="label-icon">🌍</span>
                     Cuisine
                   </label>
-                  <input
-                    type="text"
+                  <select
                     className="form-input"
-                    placeholder="Enter cuisine (e.g., Gujarati, Punjabi, Italian...)"
                     value={cuisine}
                     onChange={handleCuisineChange}
                     required={searchMode === 'cuisine'}
-                  />
+                  >
+                    <option value="">Select cuisine</option>
+                    {cuisineOptions.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                 </div>
               )}
 
