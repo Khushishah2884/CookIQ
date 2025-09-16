@@ -2,130 +2,88 @@ import React, { useState } from 'react';
 import './IngredientPredictor.css';
 
 const IngredientPredictor = ({ onRecipeGenerated }) => {
+  const [searchMode, setSearchMode] = useState('dish'); // 'dish' or 'cuisine'
   const [dishName, setDishName] = useState('');
+  const [cuisine, setCuisine] = useState('');
   const [servings, setServings] = useState(4);
   const [baseServings, setBaseServings] = useState(4);
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [error, setError] = useState('');
 
-  const popularDishes = [
-    'Pasta Carbonara', 'Chicken Curry', 'Beef Stir Fry', 'Vegetable Soup',
-    'Pizza Margherita', 'Fried Rice', 'Caesar Salad', 'Chocolate Cake',
-    'Fish Tacos', 'Mushroom Risotto', 'Chicken Tikka Masala', 'Pad Thai'
-  ];
+  // GET /search?query=
+  async function searchRecipes(query) {
+    const res = await fetch('http://localhost:8000/search?query=' + encodeURIComponent(query) + '&limit=8');
+    return res.json();
+  }
 
-  const handleDishNameChange = (e) => {
+  // POST /get_recipe
+  async function getRecipeByName(dishName, people) {
+    const res = await fetch('http://localhost:8000/get_recipe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: dishName, people })
+    });
+    return res.json();
+  }
+
+  const handleDishNameChange = async (e) => {
     const value = e.target.value;
     setDishName(value);
-    
     if (value.length > 2) {
-      const filtered = popularDishes.filter(dish => 
-        dish.toLowerCase().includes(value.toLowerCase())
-      );
-      setSuggestions(filtered.slice(0, 5));
+      try {
+        const result = await searchRecipes(value);
+        const suggestions = (result.results || []).map(r => r.dish_name || r.title || '');
+        setSuggestions(suggestions.slice(0, 8));
+      } catch {
+        setSuggestions([]);
+      }
     } else {
       setSuggestions([]);
     }
   };
 
+  const handleCuisineChange = (e) => {
+    setCuisine(e.target.value);
+  };
+
   const selectSuggestion = (suggestion) => {
     setDishName(suggestion);
     setSuggestions([]);
+    // Do NOT fetch or show recipe here. Let user enter servings and submit.
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!dishName.trim()) return;
-
+    setError('');
+    if (searchMode === 'dish' && !dishName.trim()) return;
+    if (searchMode === 'cuisine' && !cuisine.trim()) return;
     setIsLoading(true);
-    
-    // Simulate ML prediction API call
-    setTimeout(() => {
-      const mockPrediction = {
-        type: 'ingredient-prediction',
-        dishName: dishName,
-        baseServings: baseServings,
-        targetServings: servings,
-        scalingFactor: servings / baseServings,
-        ingredients: [
-          {
-            name: 'Pasta',
-            baseAmount: 300,
-            scaledAmount: Math.round((300 * servings) / baseServings),
-            unit: 'g',
-            category: 'Carbohydrates',
-            confidence: 0.95
-          },
-          {
-            name: 'Bacon',
-            baseAmount: 150,
-            scaledAmount: Math.round((150 * servings) / baseServings),
-            unit: 'g',
-            category: 'Protein',
-            confidence: 0.92
-          },
-          {
-            name: 'Eggs',
-            baseAmount: 3,
-            scaledAmount: Math.round((3 * servings) / baseServings),
-            unit: 'pieces',
-            category: 'Protein',
-            confidence: 0.88
-          },
-          {
-            name: 'Parmesan Cheese',
-            baseAmount: 80,
-            scaledAmount: Math.round((80 * servings) / baseServings),
-            unit: 'g',
-            category: 'Dairy',
-            confidence: 0.90
-          },
-          {
-            name: 'Heavy Cream',
-            baseAmount: 200,
-            scaledAmount: Math.round((200 * servings) / baseServings),
-            unit: 'ml',
-            category: 'Dairy',
-            confidence: 0.85
-          },
-          {
-            name: 'Garlic',
-            baseAmount: 2,
-            scaledAmount: Math.max(1, Math.round((2 * servings) / baseServings)),
-            unit: 'cloves',
-            category: 'Aromatics',
-            confidence: 0.78
-          },
-          {
-            name: 'Black Pepper',
-            baseAmount: 1,
-            scaledAmount: Math.round((1 * servings) / baseServings * 10) / 10,
-            unit: 'tsp',
-            category: 'Spices',
-            confidence: 0.82
-          },
-          {
-            name: 'Salt',
-            baseAmount: 0.5,
-            scaledAmount: Math.round((0.5 * servings) / baseServings * 10) / 10,
-            unit: 'tsp',
-            category: 'Spices',
-            confidence: 0.75
-          }
-        ],
-        accuracy: 89.5,
-        cookingTime: Math.round((25 * servings) / baseServings),
-        difficulty: 'Medium',
-        tips: [
-          'Adjust salt and pepper to taste',
-          'Cook pasta al dente for best texture',
-          'Add cream slowly to prevent curdling'
-        ]
-      };
-
+    try {
+      let data;
+      if (searchMode === 'dish') {
+        data = await getRecipeByName(dishName, servings);
+      } else {
+        // For cuisine, you may want to implement a similar endpoint or logic
+        setError('Cuisine-based prediction not implemented.');
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(false);
-      onRecipeGenerated(mockPrediction);
-    }, 2500);
+      onRecipeGenerated(data);
+    } catch (err) {
+      setError('Server error');
+      setIsLoading(false);
+    }
+  };
+
+  const handleServingsChange = (e) => {
+    const val = e.target.value;
+    setServings(val === '' ? '' : Math.max(1, parseInt(val) || 1));
+  };
+  const handleBaseServingsChange = (e) => {
+    const val = e.target.value;
+    setBaseServings(val === '' ? '' : Math.max(1, parseInt(val) || 1));
   };
 
   return (
@@ -134,42 +92,85 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
         <div className="predictor-header">
           <h1 className="page-title">📊 Ingredient Predictor</h1>
           <p className="page-subtitle">
-            Enter a dish name and serving size, and our AI will predict the exact ingredient quantities you need!
+            Enter a dish name or cuisine and serving size, and our AI will predict the exact ingredient quantities you need!
           </p>
         </div>
 
         <div className="predictor-content">
           <div className="predictor-form-section">
             <form onSubmit={handleSubmit} className="predictor-form card">
-              <div className="form-group">
-                <label className="form-label">
-                  <span className="label-icon">🍽️</span>
-                  Dish Name
-                </label>
-                <div className="autocomplete-container">
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label className="form-label">Search Mode:</label>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <label>
+                    <input
+                      type="radio"
+                      name="searchMode"
+                      value="dish"
+                      checked={searchMode === 'dish'}
+                      onChange={() => setSearchMode('dish')}
+                    />{' '}
+                    By Dish Name
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="searchMode"
+                      value="cuisine"
+                      checked={searchMode === 'cuisine'}
+                      onChange={() => setSearchMode('cuisine')}
+                    />{' '}
+                    By Cuisine
+                  </label>
+                </div>
+              </div>
+
+              {searchMode === 'dish' ? (
+                <div className="form-group">
+                  <label className="form-label">
+                    <span className="label-icon">🍽️</span>
+                    Dish Name
+                  </label>
+                  <div className="autocomplete-container">
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Enter dish name (e.g., Pasta Carbonara, Chicken Curry...)"
+                      value={dishName}
+                      onChange={handleDishNameChange}
+                      required={searchMode === 'dish'}
+                    />
+                    {suggestions.length > 0 && (
+                      <div className="suggestions-dropdown">
+                        {suggestions.map((suggestion, index) => (
+                          <div
+                            key={index}
+                            className="suggestion-item"
+                            onClick={() => selectSuggestion(suggestion)}
+                          >
+                            {suggestion}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label className="form-label">
+                    <span className="label-icon">🌍</span>
+                    Cuisine
+                  </label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="Enter dish name (e.g., Pasta Carbonara, Chicken Curry...)"
-                    value={dishName}
-                    onChange={handleDishNameChange}
-                    required
+                    placeholder="Enter cuisine (e.g., Gujarati, Punjabi, Italian...)"
+                    value={cuisine}
+                    onChange={handleCuisineChange}
+                    required={searchMode === 'cuisine'}
                   />
-                  {suggestions.length > 0 && (
-                    <div className="suggestions-dropdown">
-                      {suggestions.map((suggestion, index) => (
-                        <div
-                          key={index}
-                          className="suggestion-item"
-                          onClick={() => selectSuggestion(suggestion)}
-                        >
-                          {suggestion}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
 
               <div className="form-row">
                 <div className="form-group">
@@ -183,7 +184,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                     min="1"
                     max="50"
                     value={servings}
-                    onChange={(e) => setServings(parseInt(e.target.value))}
+                    onChange={handleServingsChange}
                   />
                 </div>
 
@@ -198,7 +199,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                     min="1"
                     max="20"
                     value={baseServings}
-                    onChange={(e) => setBaseServings(parseInt(e.target.value))}
+                    onChange={handleBaseServingsChange}
                   />
                 </div>
               </div>
@@ -212,10 +213,14 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                 </div>
               </div>
 
+              {error && (
+                <div style={{ color: 'red', textAlign: 'center', marginBottom: 12 }}>{error}</div>
+              )}
+
               <button 
                 type="submit" 
                 className="btn btn-primary btn-large w-full"
-                disabled={isLoading || !dishName.trim()}
+                disabled={isLoading || (searchMode === 'dish' ? !dishName.trim() : !cuisine.trim())}
               >
                 {isLoading ? (
                   <>
@@ -281,7 +286,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
             <div className="popular-dishes card">
               <h3>🔥 Popular Dishes</h3>
               <div className="dishes-grid">
-                {popularDishes.slice(0, 6).map((dish, index) => (
+                {suggestions.slice(0, 6).map((dish, index) => (
                   <button
                     key={index}
                     className="dish-tag"

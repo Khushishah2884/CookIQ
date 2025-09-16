@@ -8,7 +8,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Make sure your MongoDB URI is correct and database is named "CookIQ"
 mongoose.connect(
   process.env.MONGO_URI,
   { useNewUrlParser: true, useUnifiedTopology: true }
@@ -21,4 +20,3 @@ app.use('/api/users', userRoutes);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-// Error: Cannot find module 'mongoose'

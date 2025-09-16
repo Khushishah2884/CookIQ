@@ -31,8 +31,29 @@ const RecipeGenerator = ({ onRecipeGenerated }) => {
     if (!ingredients.trim()) return;
 
     setIsLoading(true);
-    
-    // Simulate API call
+
+    // Example: Call backend for cuisine-based prediction
+    try {
+      const response = await fetch('http://localhost:5000/api/ingredient-predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingredients,
+          servings,
+          cuisine,
+          dietaryRestrictions
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setIsLoading(false);
+        onRecipeGenerated(data);
+        return;
+      }
+    } catch (err) {
+      // fallback to mock if backend fails
+    }
+
     setTimeout(() => {
       const mockRecipes = [
         {
@@ -97,10 +118,10 @@ const RecipeGenerator = ({ onRecipeGenerated }) => {
         type: 'recipe-generation',
         query: ingredients,
         servings: servings,
+        cuisine: cuisine, // include cuisine in mock
         recipes: mockRecipes,
         totalFound: mockRecipes.length
       };
-
       setIsLoading(false);
       onRecipeGenerated(recipeData);
     }, 2000);

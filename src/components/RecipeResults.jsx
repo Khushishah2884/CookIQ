@@ -177,64 +177,55 @@ const RecipeResults = ({ data }) => {
             </p>
           </div>
 
-          <div className="prediction-summary card">
+          <div className="prediction-summary card modern-summary">
             <div className="summary-stats">
               <div className="stat-item">
-                <span className="stat-value">{data.accuracy}%</span>
+                <span className="stat-value highlight">{data.accuracy}%</span>
                 <span className="stat-label">Accuracy</span>
               </div>
               <div className="stat-item">
-                <span className="stat-value">{data.scalingFactor}x</span>
+                <span className="stat-value highlight">{data.scalingFactor}x</span>
                 <span className="stat-label">Scale Factor</span>
               </div>
               <div className="stat-item">
-                <span className="stat-value">{data.cookingTime} min</span>
+                <span className="stat-value highlight">{data.cookingTime} min</span>
                 <span className="stat-label">Cook Time</span>
               </div>
               <div className="stat-item">
-                <span className="stat-value">{data.difficulty}</span>
+                <span className="stat-value highlight">{data.difficulty}</span>
                 <span className="stat-label">Difficulty</span>
               </div>
             </div>
           </div>
 
-          <div className="ingredients-results">
-            <h2>Predicted Ingredients</h2>
-            <div className="ingredients-grid">
-              {data.ingredients.map((ingredient, index) => (
-                <div key={index} className="ingredient-prediction-card card">
-                  <div className="ingredient-header">
-                    <h3 className="ingredient-name">{ingredient.name}</h3>
-                    <span className="ingredient-category">{ingredient.category}</span>
+          <h2 className="predicted-ingredients-title">Predicted Ingredients</h2>
+          <div className="modern-ingredients-grid">
+            {data.ingredients.map((ingredient, index) => (
+              <div key={index} className="modern-ingredient-card card">
+                <div className="modern-ingredient-header">
+                  <span className="modern-ingredient-name">{ingredient.name}</span>
+                  {ingredient.category && (
+                    <span className="modern-ingredient-category">{ingredient.category}</span>
+                  )}
+                </div>
+                <div className="modern-amounts-row">
+                  <div className="modern-amount-col">
+                    <div className="modern-amount-label">Base ({data.baseServings} servings)</div>
+                    <div className="modern-amount-value">{ingredient.baseAmount} {ingredient.unit}</div>
                   </div>
-                  
-                  <div className="ingredient-amounts">
-                    <div className="amount-comparison">
-                      <div className="base-amount">
-                        <span className="amount-label">Base ({data.baseServings} servings)</span>
-                        <span className="amount-value">{ingredient.baseAmount} {ingredient.unit}</span>
-                      </div>
-                      <div className="scaled-amount">
-                        <span className="amount-label">Scaled ({data.targetServings} servings)</span>
-                        <span className="amount-value highlight">{ingredient.scaledAmount} {ingredient.unit}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="confidence-bar">
-                    <div className="confidence-label">
-                      Confidence: {Math.round(ingredient.confidence * 100)}%
-                    </div>
-                    <div className="confidence-progress">
-                      <div 
-                        className="confidence-fill"
-                        style={{ width: `${ingredient.confidence * 100}%` }}
-                      ></div>
-                    </div>
+                  <div className="modern-amount-col">
+                    <div className="modern-amount-label">Scaled ({data.targetServings} servings)</div>
+                    <div className="modern-amount-value highlight">{ingredient.scaledAmount} {ingredient.unit}</div>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="modern-confidence-row">
+                  <span className="modern-confidence-label">Confidence: {Math.round(ingredient.confidence * 100)}%</span>
+                  <div className="modern-confidence-bar">
+                    <div className="modern-confidence-fill" style={{ width: `${ingredient.confidence * 100}%` }}></div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="tips-section card">
@@ -249,7 +240,6 @@ const RecipeResults = ({ data }) => {
           <div className="feedback-section card">
             <h3>📝 Rate This Prediction</h3>
             <p>Help us improve our AI by rating the accuracy of these predictions</p>
-            
             <div className="rating-stars">
               {[1, 2, 3, 4, 5].map(star => (
                 <button
@@ -261,7 +251,6 @@ const RecipeResults = ({ data }) => {
                 </button>
               ))}
             </div>
-
             {showFeedback && (
               <div className="feedback-form">
                 <textarea
@@ -278,6 +267,56 @@ const RecipeResults = ({ data }) => {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (data.id && data.ingredients && data.instructions) {
+    // Split instructions into steps if possible
+    let steps = [];
+    if (Array.isArray(data.instructions)) {
+      steps = data.instructions;
+    } else if (typeof data.instructions === 'string') {
+      // Try to split by line or number
+      steps = data.instructions
+        .split(/\n|\r|(?=\d+\.|\d+\))/)
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+    return (
+      <section className="recipe-details">
+        <div className="container">
+          <div className="results-header">
+            <h1 className="page-title">🍽️ Recipe Details</h1>
+            <p className="page-subtitle">
+              {data.dish_name} &ndash; {data.cuisine} &ndash; {data.servings?.scaled_to || data.servings?.base || '?'} servings
+            </p>
+          </div>
+          <div className="ingredients-section card">
+            <h2>Ingredients</h2>
+            <div className="ingredients-grid">
+              {data.ingredients.map((ing, idx) => (
+                <div key={idx} className="ingredient-card">
+                  <div className="ingredient-name-top">{ing.ingredient}</div>
+                  <div className="ingredient-qty">
+                    {ing.quantity} {ing.unit}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="instructions-section card">
+            <h2>Instructions</h2>
+            <ol className="instructions-list styled-steps">
+              {steps.map((step, idx) => (
+                <li key={idx} className="instruction-step">
+                  <span className="step-icon">🍴</span>
+                  <span className="step-text">{step}</span>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
       </section>
