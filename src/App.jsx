@@ -10,6 +10,7 @@ import Footer from './components/Footer';
 import SignUp from './components/SignUp';
 import SignIn from './components/SignIn';
 import Profile from './components/Profile';
+import DishResult from './components/DishResult';
 import './App.css';
 
 function App() {
@@ -38,7 +39,7 @@ function App() {
   const handleRecipeGenerated = (data) => {
     setRecipeData(data);
     setActiveModule('results');
-    navigate('/results');
+    navigate('/dish-result');
   };
 
   return (
@@ -75,22 +76,26 @@ function App() {
               recipeData
                 ? <RecipeResults data={recipeData} />
                 : (() => {
-                    // Try to get selectedRecipe from localStorage (from profile)
                     const selectedRecipe = localStorage.getItem('selectedRecipe');
                     if (selectedRecipe) {
                       const recipe = JSON.parse(selectedRecipe);
-                      // Wrap in expected format for RecipeResults
                       return <RecipeResults data={recipe} />;
                     }
                     return <Hero onModuleChange={handleModuleChange} />;
                   })()
             }
           />
-          {/* Add more routes as needed */}
+          <Route
+            path="/dish-result"
+            element={
+              recipeData
+                ? <DishResult recipes={recipeData.recipes || []} servings={recipeData.servings} />
+                : <Hero onModuleChange={handleModuleChange} />
+            }
+          />
         </Routes>
       </main>
       <Footer />
-      {/* Chatbot */}
       <Chatbot
         isOpen={isChatbotOpen}
         onToggle={() => setIsChatbotOpen(!isChatbotOpen)}

@@ -11,6 +11,8 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [error, setError] = useState('');
   const [savedIds, setSavedIds] = useState([]);
+  const [predictedRecipe, setPredictedRecipe] = useState(null);
+  const [isRecipeSaved, setIsRecipeSaved] = useState(false);
   const user = JSON.parse(localStorage.getItem('user'));
   const token = localStorage.getItem('token');
 
@@ -87,6 +89,8 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
       if (searchMode === 'dish') {
         data = await getRecipeByName(dishName, servings);
         setIsLoading(false);
+        setPredictedRecipe(data); // Save for heart icon
+        setIsRecipeSaved(false);  // Reset saved state
         onRecipeGenerated(data);
       } else {
         // Fetch dishes for the selected cuisine and target servings
@@ -136,6 +140,29 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
     }
   };
 
+  // Save predicted recipe handler
+  const handleSavePredictedRecipe = async () => {
+    if (!user || !token || !predictedRecipe) {
+      alert('Please sign in to save recipes.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:5000/api/users/save-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ recipe: predictedRecipe })
+      });
+      if (res.ok) {
+        setIsRecipeSaved(true);
+      }
+    } catch {
+      alert('Failed to save recipe.');
+    }
+  };
+
   // Render results (for both options)
   const renderResults = (data) => {
     if (!data) return null;
@@ -176,6 +203,52 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
             {/* ...existing code... */}
           </div>
         ))}
+      </div>
+    );
+  };
+
+  // Render predicted recipe result with heart icon (for dish name search)
+  const renderPredictedRecipe = () => {
+    if (!predictedRecipe) return null;
+    return (
+      <div className="predicted-recipe-card card" style={{ marginTop: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0 }}>{predictedRecipe.dish_name}</h2>
+          <button
+            className="save-btn"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: isRecipeSaved ? 'default' : 'pointer',
+              fontSize: 28,
+              color: isRecipeSaved ? '#e74c3c' : '#ccc',
+              transition: 'color 0.2s'
+            }}
+            title={isRecipeSaved ? 'Saved' : 'Save Recipe'}
+            onClick={isRecipeSaved ? undefined : handleSavePredictedRecipe}
+            disabled={isRecipeSaved}
+          >
+            {isRecipeSaved ? '❤️' : '🤍'}
+          </button>
+        </div>
+        <div style={{ marginTop: 8, color: '#667eea' }}>
+          <strong>Cuisine:</strong> {predictedRecipe.cuisine || 'N/A'} &nbsp; | &nbsp;
+          <strong>Servings:</strong> {servings}
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <strong>Ingredients:</strong>
+          <ul>
+            {(predictedRecipe.ingredients || []).map((ing, idx) => (
+              <li key={idx}>
+                {ing.ingredient} - {ing.quantity} {ing.unit}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <strong>Instructions:</strong>
+          <div>{predictedRecipe.instructions}</div>
+        </div>
       </div>
     );
   };
@@ -346,7 +419,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                   <div className="stat-label">Recipes Trained</div>
                 </div>
                 <div className="ml-stat">
-                  <div className="stat-value">50+</div>
+                  <div className="stat-value">10+</div>
                   <div className="stat-label">Cuisines</div>
                 </div>
               </div>
@@ -396,6 +469,9 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
             </div>
           </div>
         </div>
+
+        {/* Show predicted recipe result with heart icon for dish name search */}
+        {searchMode === 'dish' && renderPredictedRecipe()}
       </div>
     </section>
   );

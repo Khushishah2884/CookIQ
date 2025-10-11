@@ -213,4 +213,7 @@ def ingredient_predict(req: IngredientPredictRequest) -> dict:
         "difficulty": best_match.get("difficulty", "Medium"),
         "tips": ["You can adjust spices as per your taste.", "Try adding fresh herbs for more flavor"]
     }
-       
+
+from dish_sugg import router as ingredient_router
+
+app.include_router(ingredient_router)   
