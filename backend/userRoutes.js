@@ -82,6 +82,32 @@ router.post('/save-recipe', auth, async (req, res) => {
   }
 });
 
+// Save recipe for user
+router.post('/save-recipe', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'No token provided' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+    const recipe = req.body.recipe;
+    if (!recipe) return res.status(400).json({ message: 'No recipe provided' });
+
+    // Save in SavedRecipe table
+    const saved = await SavedRecipe.create({ userId, recipe });
+
+    // Add to user's savedRecipes array (if not already present)
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { savedRecipes: saved._id } },
+      { new: true }
+    );
+
+    res.json({ success: true, savedId: saved._id });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to save recipe', error: err.message });
+  }
+});
+
 // Get saved recipes for current user
 router.get('/saved-recipes', auth, async (req, res) => {
   try {

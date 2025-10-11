@@ -72,7 +72,18 @@ function App() {
           <Route
             path="/results"
             element={
-              recipeData ? <RecipeResults data={recipeData} /> : <Hero onModuleChange={handleModuleChange} />
+              recipeData
+                ? <RecipeResults data={recipeData} />
+                : (() => {
+                    // Try to get selectedRecipe from localStorage (from profile)
+                    const selectedRecipe = localStorage.getItem('selectedRecipe');
+                    if (selectedRecipe) {
+                      const recipe = JSON.parse(selectedRecipe);
+                      // Wrap in expected format for RecipeResults
+                      return <RecipeResults data={recipe} />;
+                    }
+                    return <Hero onModuleChange={handleModuleChange} />;
+                  })()
             }
           />
           {/* Add more routes as needed */}

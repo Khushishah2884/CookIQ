@@ -1,10 +1,46 @@
 import React, { useState } from 'react';
 import './RecipeResults.css';
 
+// Utility to split instructions into steps and filter out empty/number-only steps
+const formatInstructions = (instructions) => {
+  if (!instructions || typeof instructions !== 'string') return [];
+  // Split by step numbers (e.g., "1.", "2.", etc.)
+  let steps = instructions.split(/\s*\d+\.\s*/).map(s => s.trim());
+  // Remove empty steps and steps that are just numbers (e.g., "1", "2", "3")
+  steps = steps.filter(s => s && !/^\d+$/.test(s));
+  return steps;
+};
+
 const RecipeResults = ({ data }) => {
   // State for "view more" modal and pagination
   const [modalRecipe, setModalRecipe] = useState(null);
   const [visibleCount, setVisibleCount] = useState(12);
+  const [savedIds, setSavedIds] = useState([]);
+  const user = JSON.parse(localStorage.getItem('user'));
+  const token = localStorage.getItem('token');
+
+  // Save recipe handler
+  const handleSaveRecipe = async (recipe) => {
+    if (!user || !token) {
+      alert('Please sign in to save recipes.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:5000/api/users/save-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ recipe })
+      });
+      if (res.ok) {
+        setSavedIds(prev => [...prev, recipe._id || recipe.id]);
+      }
+    } catch {
+      alert('Failed to save recipe.');
+    }
+  };
 
   // Infinite scroll: load more on scroll to bottom
   React.useEffect(() => {
@@ -203,7 +239,26 @@ const RecipeResults = ({ data }) => {
             {showList.map((dish, idx) => (
               <div key={dish._id || dish.id || idx} className="recipe-card card">
                 <div className="recipe-content">
-                  <h3 className="recipe-title">{dish.dish_name || dish.name || dish.title}</h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 className="recipe-title">{dish.dish_name || dish.name || dish.title}</h3>
+                    {/* Favorite icon button */}
+                    <button
+                      className="save-btn"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 24,
+                        color: savedIds.includes(dish._id || dish.id) ? '#e74c3c' : '#ccc',
+                        transition: 'color 0.2s'
+                      }}
+                      title={savedIds.includes(dish._id || dish.id) ? 'Saved' : 'Save Recipe'}
+                      onClick={() => handleSaveRecipe(dish)}
+                      disabled={savedIds.includes(dish._id || dish.id)}
+                    >
+                      {savedIds.includes(dish._id || dish.id) ? '❤️' : '🤍'}
+                    </button>
+                  </div>
                   <div className="recipe-meta">
                     <span className="meta-item">
                       <span className="meta-icon">⏱️</span>
@@ -229,6 +284,14 @@ const RecipeResults = ({ data }) => {
                         </div>
                       )}
                     </div>
+                  </div>
+                  <div className="recipe-instructions">
+                    <h4>Instructions</h4>
+                    <ol>
+                      {formatInstructions(dish.instructions).map((step, i) => (
+                        <li key={i}>{step}</li>
+                      ))}
+                    </ol>
                   </div>
                   <button
                     className="btn btn-primary"
@@ -410,6 +473,97 @@ const RecipeResults = ({ data }) => {
             </ol>
           </div>
         </div>
+      </section>
+    );
+  }
+
+  if (data.type === 'dish-suggested') {
+    const targetServings = data.targetServings || 4;
+    return (
+      <section className="cuisine-dishes-results">
+        <div className="container">
+          <div className="results-header">
+            <h1 className="page-title">🍽️ {data.cuisine} Dishes</h1>
+            <p className="page-subtitle">
+              Showing ingredient quantities for <strong>{targetServings}</strong> servings.
+            </p>
+          </div>
+          <div className="recipes-grid">
+            {data.dishes.length === 0 && (
+              <div>No dishes found for this cuisine.</div>
+            )}
+            {data.dishes.map((dish, idx) => (
+              <div key={dish._id || idx} className="recipe-card card">
+                <div className="recipe-content">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 className="recipe-title">{dish.dish_name || dish.title}</h3>
+                    {/* Favorite icon button */}
+                    <button
+                      className="save-btn"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 24,
+                        color: savedIds.includes(dish._id || dish.id) ? '#e74c3c' : '#ccc',
+                        transition: 'color 0.2s'
+                      }}
+                      title={savedIds.includes(dish._id || dish.id) ? 'Saved' : 'Save Recipe'}
+                      onClick={() => handleSaveRecipe(dish)}
+                      disabled={savedIds.includes(dish._id || dish.id)}
+                    >
+                      {savedIds.includes(dish._id || dish.id) ? '❤️' : '🤍'}
+                    </button>
+                  </div>
+                  <div className="recipe-meta">
+                    <span className="meta-item">
+                      <span className="meta-icon">⏱️</span>
+                      {dish.time_to_prepare_minutes ? `${dish.time_to_prepare_minutes} min` : 'N/A'}
+                    </span>
+                    <span className="meta-item">
+                      <span className="meta-icon">👥</span>
+                      {dish.servings_scaled_to || targetServings} servings
+                    </span>
+                  </div>
+                  <div className="ingredients-preview">
+                    <h4>Ingredients:</h4>
+                    <div className="ingredients-list">
+                      {(dish.ingredients_scaled || dish.ingredients || []).slice(0, 3).map((ingredient, i) => (
+                        <div key={i} className="ingredient-item">
+                          <span className="ingredient-name">{ingredient.ingredient || ingredient.name}</span>
+                          <span className="ingredient-amount">{ingredient.quantity || ingredient.amount} {ingredient.unit || ''}</span>
+                        </div>
+                      ))}
+                      {((dish.ingredients_scaled || dish.ingredients || []).length > 3) && (
+                        <div className="more-ingredients">
+                          +{(dish.ingredients_scaled || dish.ingredients).length - 3} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    style={{ marginTop: 12 }}
+                    onClick={() => setModalRecipe(dish)}
+                  >
+                    View More
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {visibleCount < data.dishes.length && (
+            <div style={{ textAlign: 'center', margin: '24px 0' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setVisibleCount(visibleCount + 12)}
+              >
+                Load More
+              </button>
+            </div>
+          )}
+        </div>
+        {renderModal()}
       </section>
     );
   }

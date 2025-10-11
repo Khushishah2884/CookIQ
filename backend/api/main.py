@@ -5,7 +5,6 @@ from typing import Optional
 import json, os, re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from fastapi import Body
 
 # -------------------------------
 # Load dataset
@@ -77,9 +76,14 @@ def adjust_instructions(instr, orig, scaled):
 # -------------------------------
 app = FastAPI(title="Recipe API", version="1.0")
 
+# Allow your frontend origin
+origins = [
+    "http://localhost:3000",  # React app
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow frontend React dev
+    allow_origins=origins,           # or ["*"] to allow all
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -97,32 +101,39 @@ class IngredientPredictRequest(BaseModel):
     dietaryRestrictions: Optional[list] = []
 
 @app.get("/health")
-def health():
+def health() -> dict:
     return {"status": "ok"}
 
 @app.get("/cuisines")
-def get_cuisines():
+def get_cuisines() -> dict:
     cuisines = sorted({(r.get("cuisine") or "Unknown") for r in recipes})
     return {"cuisines": cuisines, "count": len(cuisines)}
 
 @app.get("/dishes")
-def get_dishes(cuisine: str):
-    matches = [r for r in recipes if (r.get("cuisine") or "").lower() == cuisine.lower()]
+def get_dishes(cuisine: str, people: float = 4.0) -> dict:
+    matches = [r.copy() for r in recipes if (r.get("cuisine") or "").lower() == cuisine.lower()]
+    # Scale ingredients for each recipe to the requested people count
+    for r in matches:
+        base = detect_base_servings(r)
+        r["ingredients_scaled"] = scale_ingredients(r.get("ingredients", []), base, people)
+        r["servings_scaled_to"] = people
+        
     return {"cuisine": cuisine, "count": len(matches), "dishes": matches}
 
 @app.get("/search")
-def search(query: str, limit: int = 5):
-    if vectorizer:
-        qv = vectorizer.transform([query])
-        sim = cosine_similarity(qv, dish_vectors).flatten()
-        idxs = sim.argsort()[::-1][:limit]
-        return {"results": [recipes[i] for i in idxs]}
-    else:
-        subs = [r for r in recipes if query.lower() in r.get("dish_name","").lower()]
-        return {"results": subs[:limit]}
+def search(query: str, limit: int = 8) -> dict:
+    query_lower = query.strip().lower()
+    suggestions = [
+        r for r in recipes
+        if query_lower in (r.get("dish_name", "") or "").lower()
+    ]
+    # Return full recipe objects so _id is available for /get_recipe
+    return {
+        "results": suggestions[:limit]
+    }
 
 @app.get("/recipe/{recipe_id}")
-def get_recipe(recipe_id: int, people: float = 2.0):
+def get_recipe(recipe_id: int, people: float = 2.0) -> dict:
     r = next((x for x in recipes if x["_id"] == recipe_id), None)
     if not r:
         raise HTTPException(404, "Recipe not found")
@@ -141,18 +152,23 @@ def get_recipe(recipe_id: int, people: float = 2.0):
     }
 
 @app.post("/get_recipe")
-def post_get_recipe(req: RecipeRequest):
+def post_get_recipe(req: RecipeRequest) -> dict:
     if req.recipe_id is not None:
         return get_recipe(req.recipe_id, req.people or 2.0)
+
     if req.query:
         result = search(req.query, limit=1)["results"]
+        print("Search result:", result)  # 👈 ADD THIS LINE
         if result:
-            rid = result[0]["_id"]
+            rid = result[0].get("_id") or result[0].get("id") or result[0].get("recipe_id")
+            if not rid:
+                raise HTTPException(500, "Recipe ID not found in search result")
             return get_recipe(rid, req.people or 2.0)
+
     raise HTTPException(400, "Provide recipe_id or query")
 
 @app.post("/api/ingredient-predict")
-def ingredient_predict(req: IngredientPredictRequest = Body(...)):
+def ingredient_predict(req: IngredientPredictRequest) -> dict:
     # Filter recipes by cuisine if provided
     filtered = recipes
     if req.cuisine:
@@ -194,6 +210,7 @@ def ingredient_predict(req: IngredientPredictRequest = Body(...)):
         "accuracy": 95,
         "scalingFactor": round((req.servings or 2) / base_servings, 2),
         "cookingTime": best_match.get("time_to_prepare_minutes", 30),
-        "difficulty": best_match.get("type", "Medium"),
+        "difficulty": best_match.get("difficulty", "Medium"),
         "tips": ["You can adjust spices as per your taste.", "Try adding fresh herbs for more flavor"]
     }
+       
