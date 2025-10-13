@@ -10,6 +10,11 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [error, setError] = useState('');
+  const [savedIds, setSavedIds] = useState([]);
+  const [predictedRecipe, setPredictedRecipe] = useState(null);
+  const [isRecipeSaved, setIsRecipeSaved] = useState(false);
+  const user = JSON.parse(localStorage.getItem('user'));
+  const token = localStorage.getItem('token');
 
   const cuisineOptions = [
     'Andhra Pradesh', 'Bengali', 'Bihari','East', 'Gujarati', 'Hyderabadi', 
@@ -20,7 +25,9 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
   // GET /search?query=
   async function searchRecipes(query) {
     const res = await fetch('http://localhost:8000/search?query=' + encodeURIComponent(query) + '&limit=8');
-    return res.json();
+    const result = await res.json();
+    // result.results is now [{dish_name: ...}], not full recipe objects
+    return result;
   }
 
   // POST /get_recipe
@@ -39,7 +46,8 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
     if (value.length > 2) {
       try {
         const result = await searchRecipes(value);
-        const suggestions = (result.results || []).map(r => r.dish_name || r.title || '');
+        // result.results is [{dish_name: ...}]
+        const suggestions = (result.results || []).map(r => r.dish_name || '');
         setSuggestions(suggestions.slice(0, 8));
       } catch {
         setSuggestions([]);
@@ -60,8 +68,13 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
     // Do NOT fetch or show recipe here. Let user enter servings and submit.
   };
 
-  const fetchDishesByCuisine = async (cuisine) => {
-    const res = await fetch('http://localhost:8000/dishes?cuisine=' + encodeURIComponent(cuisine));
+  const fetchDishesByCuisine = async (cuisine, people) => {
+    const res = await fetch(
+      'http://localhost:8000/dishes?cuisine=' +
+        encodeURIComponent(cuisine) +
+        '&people=' +
+        encodeURIComponent(people)
+    );
     return res.json();
   };
 
@@ -76,15 +89,17 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
       if (searchMode === 'dish') {
         data = await getRecipeByName(dishName, servings);
         setIsLoading(false);
+        setPredictedRecipe(data); // Save for heart icon
+        setIsRecipeSaved(false);  // Reset saved state
         onRecipeGenerated(data);
       } else {
-        // Fetch dishes for the selected cuisine
-        const result = await fetchDishesByCuisine(cuisine);
+        // Fetch dishes for the selected cuisine and target servings
+        const result = await fetchDishesByCuisine(cuisine, servings);
         setIsLoading(false);
-        // Format for RecipeResults: type: 'cuisine-dishes', cuisine, dishes: []
         onRecipeGenerated({
-          type: 'cuisine-dishes',
+          type: 'dish-suggested', // <-- changed from 'cuisine-dishes'
           cuisine,
+          targetServings: servings,
           dishes: result.dishes || []
         });
       }
@@ -101,6 +116,141 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
   const handleBaseServingsChange = (e) => {
     const val = e.target.value;
     setBaseServings(val === '' ? '' : Math.max(1, parseInt(val) || 1));
+  };
+
+  const handleSaveRecipe = async (recipe) => {
+    if (!user || !token) {
+      alert('Please sign in to save recipes.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:5000/api/users/save-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ recipe })
+      });
+      if (res.ok) {
+        setSavedIds(prev => [...prev, recipe._id || recipe.id]);
+      }
+    } catch {
+      alert('Failed to save recipe.');
+    }
+  };
+
+  // Save predicted recipe handler
+  const handleSavePredictedRecipe = async () => {
+    if (!user || !token || !predictedRecipe) {
+      alert('Please sign in to save recipes.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:5000/api/users/save-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ recipe: predictedRecipe })
+      });
+      if (res.ok) {
+        setIsRecipeSaved(true);
+      }
+    } catch {
+      alert('Failed to save recipe.');
+    }
+  };
+
+  // Render results (for both options)
+  const renderResults = (data) => {
+    if (!data) return null;
+    const recipes = data.dishes || data.recipes || [];
+    return (
+      <div className="results-list">
+        {recipes.map((recipe, idx) => (
+          <div className="recipe-card card" key={idx}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 className="recipe-name">{recipe.dish_name || recipe.name}</h3>
+              {/* Favorite icon button */}
+              <button
+                className="save-btn"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 24,
+                  color: savedIds.includes(recipe._id || recipe.id) ? '#e74c3c' : '#ccc',
+                  transition: 'color 0.2s'
+                }}
+                title={savedIds.includes(recipe._id || recipe.id) ? 'Saved' : 'Save Recipe'}
+                onClick={() => handleSaveRecipe(recipe)}
+                disabled={savedIds.includes(recipe._id || recipe.id)}
+              >
+                {savedIds.includes(recipe._id || recipe.id) ? '❤️' : '🤍'}
+              </button>
+            </div>
+            {/* ...other recipe info... */}
+            <div className="recipe-instructions">
+              <h4>Instructions:</h4>
+              <ol>
+                {(recipe.instructions || '').split(/\s*\d+\.\s*/).map((step, i) =>
+                  step && !/^\d+$/.test(step) ? <li key={i}>{step.trim()}</li> : null
+                )}
+              </ol>
+            </div>
+            {/* ...existing code... */}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Render predicted recipe result with heart icon (for dish name search)
+  const renderPredictedRecipe = () => {
+    if (!predictedRecipe) return null;
+    return (
+      <div className="predicted-recipe-card card" style={{ marginTop: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0 }}>{predictedRecipe.dish_name}</h2>
+          <button
+            className="save-btn"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: isRecipeSaved ? 'default' : 'pointer',
+              fontSize: 28,
+              color: isRecipeSaved ? '#e74c3c' : '#ccc',
+              transition: 'color 0.2s'
+            }}
+            title={isRecipeSaved ? 'Saved' : 'Save Recipe'}
+            onClick={isRecipeSaved ? undefined : handleSavePredictedRecipe}
+            disabled={isRecipeSaved}
+          >
+            {isRecipeSaved ? '❤️' : '🤍'}
+          </button>
+        </div>
+        <div style={{ marginTop: 8, color: '#667eea' }}>
+          <strong>Cuisine:</strong> {predictedRecipe.cuisine || 'N/A'} &nbsp; | &nbsp;
+          <strong>Servings:</strong> {servings}
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <strong>Ingredients:</strong>
+          <ul>
+            {(predictedRecipe.ingredients || []).map((ing, idx) => (
+              <li key={idx}>
+                {ing.ingredient} - {ing.quantity} {ing.unit}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <strong>Instructions:</strong>
+          <div>{predictedRecipe.instructions}</div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -152,7 +302,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Enter dish name (e.g., Pasta Carbonara, Chicken Curry...)"
+                      placeholder="Enter dish name (e.g., Paneer tikka , dhokla...)"
                       value={dishName}
                       onChange={handleDishNameChange}
                       required={searchMode === 'dish'}
@@ -269,7 +419,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                   <div className="stat-label">Recipes Trained</div>
                 </div>
                 <div className="ml-stat">
-                  <div className="stat-value">50+</div>
+                  <div className="stat-value">10+</div>
                   <div className="stat-label">Cuisines</div>
                 </div>
               </div>
@@ -319,6 +469,9 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
             </div>
           </div>
         </div>
+
+        {/* Show predicted recipe result with heart icon for dish name search */}
+        {searchMode === 'dish' && renderPredictedRecipe()}
       </div>
     </section>
   );

@@ -68,17 +68,25 @@ function auth(req, res, next) {
   }
 }
 
-// Save a recipe
+// Save a recipe for user (with auth middleware)
 router.post('/save-recipe', auth, async (req, res) => {
   try {
-    const saved = new SavedRecipe({
-      userId: req.user.userId,
-      recipe: req.body.recipe
-    });
-    await saved.save();
-    res.status(201).json({ message: 'Recipe saved' });
+    const recipe = req.body.recipe;
+    if (!recipe) return res.status(400).json({ message: 'No recipe provided' });
+
+    // Save in SavedRecipe table
+    const saved = await SavedRecipe.create({ userId: req.user.userId, recipe });
+
+    // Add to user's savedRecipes array (if not already present)
+    await User.findByIdAndUpdate(
+      req.user.userId,
+      { $addToSet: { savedRecipes: saved._id } },
+      { new: true }
+    );
+
+    res.status(201).json({ success: true, savedId: saved._id });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Failed to save recipe', error: err.message });
   }
 });
 
