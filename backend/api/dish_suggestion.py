@@ -16,7 +16,7 @@ import difflib
 from typing import Set, List, Dict, Tuple
 
 # --- configure this path to your JSON file ---
-JSON_FILE = r"D:/PROJECTS/CookIQ/backend/api/recipes.json"
+JSON_FILE = r"D:\CookIQ\backend\api\recipes.json"
 # --------------------------------------------
 
 if not os.path.exists(JSON_FILE):

@@ -36,10 +36,23 @@ function App() {
     else if (module === 'profile') navigate('/profile');
   };
 
+  /**
+   * Centralized handler called by children when a recipe/prediction is produced.
+   * We inspect the optional `_source` flag in the payload:
+   * - If `_source === 'ingredient-predictor'` => navigate to /results
+   * - Otherwise (e.g., RecipeGenerator) => preserve previous behavior and navigate to /dish-result
+   */
   const handleRecipeGenerated = (data) => {
     setRecipeData(data);
     setActiveModule('results');
-    navigate('/dish-result');
+
+    // Decide destination based on who sent the payload
+    if (data && data._source === 'ingredient-predictor') {
+      navigate('/results');
+    } else {
+      // Keep the original routing for RecipeGenerator (unchanged behavior)
+      navigate('/dish-result');
+    }
   };
 
   return (
