@@ -32,7 +32,7 @@ const Profile = ({ onModuleChange }) => {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
-      .then(data => setSavedRecipes(data))
+      .then(data => setSavedRecipes(Array.isArray(data) ? data : []))
       .catch(() => setSavedRecipes([]));
     // eslint-disable-next-line
   }, []);
