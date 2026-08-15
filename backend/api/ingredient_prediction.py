@@ -7,7 +7,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # ----- configure this path to your JSON file -----
-JSON_FILE = r"D:/PROJECTS/CookIQ/backend/api/recipes.json"
+JSON_FILE = r"D:\CookIQ\backend\api\recipes.json"
 # -------------------------------------------------
 
 if not os.path.exists(JSON_FILE):
@@ -137,11 +137,40 @@ def format_qty_to_str(q, unit):
 
 
 # ----- scale ingredients -----
+# Add a list of ingredient keywords that should scale sublinearly (spices, aromatics, etc.)
+SUBLINEAR_INGREDIENT_KEYWORDS = [
+    "chili", "chilli", "powder", "salt", "turmeric", "coriander", "garam masala",
+    "kasuri methi", "bay leaf", "tej patta", "ginger", "garlic", "clove", "spice",
+    "pepper", "leaves", "methi", "masala"
+]
+
+
+def categorize_ingredient(name: str):
+    """Return category for scaling: bulk, moderate, strong."""
+    n = (name or "").lower()
+
+    strong_keywords = [
+        "salt", "asafoetida", "hing", "garam masala",
+        "kasuri methi", "bay leaf", "tej patta", "spice mix",
+        "pepper", "clove"
+    ]
+    moderate_keywords = [
+        "chili", "chilli", "green chili", "red chili", "turmeric",
+        "coriander", "ginger", "garlic", "leaves", "methi"
+    ]
+
+    if any(k in n for k in strong_keywords):
+        return "strong"
+    if any(k in n for k in moderate_keywords):
+        return "moderate"
+    return "bulk"
+
+
 def scale_ingredients(ingredients, base_servings, target_servings):
-    if base_servings is None or base_servings == 0:
-        factor = 1.0
-    else:
-        factor = float(target_servings) / float(base_servings)
+    if not base_servings:
+        base_servings = 2.0
+    factor = float(target_servings) / float(base_servings)
+
     out = []
     for ing in ingredients:
         if not isinstance(ing, dict):
@@ -152,24 +181,44 @@ def scale_ingredients(ingredients, base_servings, target_servings):
             name = ing.get("ingredient") or ing.get("name") or ""
             qty = ing.get("quantity")
             unit = ing.get("unit") or ""
+
+        category = categorize_ingredient(name)
+
+        if category == "bulk":
+            adj_factor = factor
+        elif category == "moderate":
+            adj_factor = factor ** 0.85
+        elif category == "strong":
+            adj_factor = factor ** 0.65
+        else:
+            adj_factor = factor
+
         if isinstance(qty, (int, float)):
-            s = qty * factor
+            s = qty * adj_factor
             s = round_qty(s, unit)
+
+            # Special case for salt minimum
+            if "salt" in (name or "").lower() and target_servings > 0:
+                min_salt = 0.3 * target_servings  # g or ~0.1 tsp per person
+                if isinstance(s, (int, float)) and s < min_salt:
+                    s = round_qty(min_salt, unit)
+
             out.append({"ingredient": name, "quantity": s, "unit": unit})
+
         elif isinstance(qty, str) and qty.strip():
-            # try to parse numeric inside the string; else preserve as-is
             m = re.search(r"(\d+\s*\d?/\d+|\d+(\.\d+)?)", qty)
             if m:
                 try:
                     val = float(m.group(1))
-                    s = round_qty(val * factor, unit)
+                    s = round_qty(val * adj_factor, unit)
                     out.append({"ingredient": name, "quantity": s, "unit": unit})
                 except:
-                    out.append({"ingredient": name, "quantity": None, "unit": None})
+                    out.append({"ingredient": name, "quantity": None, "unit": unit})
             else:
-                out.append({"ingredient": name, "quantity": None, "unit": None})
+                out.append({"ingredient": name, "quantity": None, "unit": unit})
         else:
-            out.append({"ingredient": name, "quantity": None, "unit": None})
+            out.append({"ingredient": name, "quantity": None, "unit": unit})
+
     return out
 
 

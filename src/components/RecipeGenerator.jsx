@@ -169,7 +169,7 @@ const RecipeGenerator = ({ onRecipeGenerated }) => {
                   />
                 </div>
 
-                <div className="servings-group">
+                {/* <div className="servings-group">
                   <label className="form-label">
                     <span className="label-icon">👥</span>
                     Number of Servings
@@ -194,7 +194,7 @@ const RecipeGenerator = ({ onRecipeGenerated }) => {
                       onClick={() => setServings(Math.min(20, servings + 1))}
                     >+</button>
                   </div>
-                </div>
+                </div> */}
 
                 <button
                   type="submit"

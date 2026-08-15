@@ -91,17 +91,25 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
         setIsLoading(false);
         setPredictedRecipe(data); // Save for heart icon
         setIsRecipeSaved(false);  // Reset saved state
-        onRecipeGenerated(data);
+
+        // Attach a source flag so App can decide where to route
+        const payload = { ...(data || {}), _source: 'ingredient-predictor' };
+        onRecipeGenerated(payload);
       } else {
         // Fetch dishes for the selected cuisine and target servings
         const result = await fetchDishesByCuisine(cuisine, servings);
         setIsLoading(false);
-        onRecipeGenerated({
-          type: 'dish-suggested', // <-- changed from 'cuisine-dishes'
+
+        const payload = {
+          type: 'dish-suggested',
           cuisine,
           targetServings: servings,
-          dishes: result.dishes || []
-        });
+          dishes: result.dishes || [],
+          _source: 'ingredient-predictor'
+        };
+
+        // pass suggested dishes data to parent App (App will handle navigation to /results)
+        onRecipeGenerated(payload);
       }
     } catch (err) {
       setError('Server error');
@@ -356,30 +364,6 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                     value={servings}
                     onChange={handleServingsChange}
                   />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">
-                    <span className="label-icon">📏</span>
-                    Base Recipe Servings
-                  </label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min="1"
-                    max="20"
-                    value={baseServings}
-                    onChange={handleBaseServingsChange}
-                  />
-                </div>
-              </div>
-
-              <div className="scaling-info">
-                <div className="scaling-factor">
-                  <span className="scaling-label">Scaling Factor:</span>
-                  <span className="scaling-value">
-                    {baseServings > 0 ? (servings / baseServings).toFixed(2) : '1.00'}x
-                  </span>
                 </div>
               </div>
 
