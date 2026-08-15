@@ -20,7 +20,7 @@ const DishResult = ({ recipes, servings }) => {
                   {selectedRecipe.cuisine}
                 </span>
                 <span className="time-tag">
-                  <span className="tag-icon">⏱️</span>
+                  <span className="tag-icon">⏱</span>
                   {selectedRecipe.cookTime}
                 </span>
                 <span className="servings-tag">
@@ -96,7 +96,7 @@ const DishResult = ({ recipes, servings }) => {
                 
                 <div className="preview-meta">
                   <span className="meta-item">
-                    <span className="meta-icon">⏱️</span>
+                    <span className="meta-icon">⏱</span>
                     {recipe.cookTime}
                   </span>
                   <span className="meta-item">

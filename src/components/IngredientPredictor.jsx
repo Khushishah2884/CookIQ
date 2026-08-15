@@ -136,7 +136,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}` // <-- FIXED
         },
         body: JSON.stringify({ recipe })
       });
@@ -159,7 +159,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}` // <-- FIXED
         },
         body: JSON.stringify({ recipe: predictedRecipe })
       });
@@ -196,7 +196,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                 onClick={() => handleSaveRecipe(recipe)}
                 disabled={savedIds.includes(recipe._id || recipe.id)}
               >
-                {savedIds.includes(recipe._id || recipe.id) ? '❤️' : '🤍'}
+                {savedIds.includes(recipe._id || recipe.id) ? '❤' : '🤍'}
               </button>
             </div>
             {/* ...other recipe info... */}
@@ -236,7 +236,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
             onClick={isRecipeSaved ? undefined : handleSavePredictedRecipe}
             disabled={isRecipeSaved}
           >
-            {isRecipeSaved ? '❤️' : '🤍'}
+            {isRecipeSaved ? '❤' : '🤍'}
           </button>
         </div>
         <div style={{ marginTop: 8, color: '#667eea' }}>
@@ -303,7 +303,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
               {searchMode === 'dish' ? (
                 <div className="form-group">
                   <label className="form-label">
-                    <span className="label-icon">🍽️</span>
+                    <span className="label-icon">🍽</span>
                     Dish Name
                   </label>
                   <div className="autocomplete-container">
@@ -365,6 +365,30 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                     onChange={handleServingsChange}
                   />
                 </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    <span className="label-icon">📏</span>
+                    Base Recipe Servings
+                  </label>
+                  <input
+                    type="number"
+                    className="form-input"
+                    min="1"
+                    max="20"
+                    value={baseServings}
+                    onChange={handleBaseServingsChange}
+                  />
+                </div>
+              </div>
+
+              <div className="scaling-info">
+                <div className="scaling-factor">
+                  <span className="scaling-label">Scaling Factor:</span>
+                  <span className="scaling-value">
+                    {baseServings > 0 ? (servings / baseServings).toFixed(2) : '1.00'}x
+                  </span>
+                </div>
               </div>
 
               {error && (
@@ -399,7 +423,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
                   <div className="stat-label">Accuracy</div>
                 </div>
                 <div className="ml-stat">
-                  <div className="stat-value">10K+</div>
+                  <div className="stat-value">3K+</div>
                   <div className="stat-label">Recipes Trained</div>
                 </div>
                 <div className="ml-stat">

@@ -1,23 +1,26 @@
-# dish_suggester_from_ingredients.py
+# dish_suggester_from_ingredients_ML.py
 """
-Standalone Dish Suggester
-- Loads recipes from recipes.json (configure JSON_FILE)
-- Prompts user to enter available ingredients (comma-separated)
-- Finds best-matching recipes using normalized ingredient names
-- Displays dish details (name, cuisine, type, time, ingredients, instructions)
-
-This script is intentionally standalone (no scaling or instruction-adjustment code).
+ML-based Dish Suggester (TF-IDF + Cosine Similarity + K-Means Clustering)
+-------------------------------------------------------------------------
+- Loads recipes from recipes.json
+- Uses Machine Learning (TF-IDF) for similarity
+- Applies K-Means clustering to group similar recipes
+- Suggests best-matching dishes based on entered ingredients
+- Displays name, cuisine, type, time, ingredients, and instructions
 """
 
 import os
 import json
 import re
-import difflib
-from typing import Set, List, Dict, Tuple
+from typing import List, Dict, Tuple
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.cluster import KMeans
+from collections import defaultdict
 
 # --- configure this path to your JSON file ---
-JSON_FILE = r"D:\CookIQ\backend\api\recipes.json"
-# --------------------------------------------
+JSON_FILE = r"D:/PROJECTS/CookIQ/backend/api/recipes.json"
+# ---------------------------------------------
 
 if not os.path.exists(JSON_FILE):
     raise FileNotFoundError(f"JSON file not found at {JSON_FILE}")
@@ -25,57 +28,34 @@ if not os.path.exists(JSON_FILE):
 with open(JSON_FILE, "r", encoding="utf-8") as fh:
     RECIPES = json.load(fh)
 
-# common unit and junk words to strip from ingredient names
+# Common junk/unit words to remove for cleaner ingredient matching
 UNIT_WORDS = [
-    "teaspoon",
-    "tsp",
-    "tablespoon",
-    "tbsp",
-    "cup",
-    "cups",
-    "gram",
-    "grams",
-    "g",
-    "kg",
-    "kilogram",
-    "ml",
-    "milliliter",
-    "l",
-    "liter",
-    "piece",
-    "pieces",
-    "clove",
-    "pinch",
-    "to",
-    "taste",
-    "of",
-    "and",
-    "fresh",
+    "teaspoon","tsp","tablespoon","tbsp","cup","cups","gram","grams","g","kg",
+    "kilogram","ml","milliliter","l","liter","piece","pieces","clove","pinch",
+    "to","taste","of","and","fresh"
 ]
 UNIT_RE = r"\b(?:%s)\b" % "|".join([re.escape(w) for w in UNIT_WORDS])
 
 
+# ------------------------------------------------------------------
+# Text Normalization
+# ------------------------------------------------------------------
 def normalize_ingredient_text(s: str) -> str:
-    """Return a normalized, lowercased ingredient name with quantities/units removed."""
+    """Clean and normalize ingredient text."""
     if not s:
         return ""
     t = str(s).lower()
-    # remove parentheses and their contents
-    t = re.sub(r"\([^)]*\)", " ", t)
-    # remove numeric tokens, fractions like 1/2, 1 1/2, decimals
-    t = re.sub(r"\d+[\d\s/\.]*", " ", t)
-    # remove unit words
-    t = re.sub(UNIT_RE, " ", t)
-    # remove punctuation
-    t = re.sub(r"[^a-z0-9\s]", " ", t)
-    # collapse whitespace
-    t = re.sub(r"\s+", " ", t).strip()
+    t = re.sub(r"\([^)]*\)", " ", t)           # remove parentheses
+    t = re.sub(r"\d+[\d\s/\.]*", " ", t)       # remove numbers
+    t = re.sub(UNIT_RE, " ", t)                # remove unit words
+    t = re.sub(r"[^a-z0-9\s]", " ", t)         # remove punctuation
+    t = re.sub(r"\s+", " ", t).strip()         # collapse spaces
     return t
 
 
-def extract_recipe_ingredient_names(recipe: Dict) -> Set[str]:
-    """Return normalized set of ingredient names for the given recipe dict."""
-    out = set()
+def extract_recipe_ingredient_names(recipe: Dict) -> List[str]:
+    """Return list of normalized ingredient names for a given recipe."""
+    out = []
     for ing in recipe.get("ingredients", []):
         if isinstance(ing, dict):
             name = ing.get("ingredient") or ing.get("name") or ""
@@ -83,99 +63,85 @@ def extract_recipe_ingredient_names(recipe: Dict) -> Set[str]:
             name = str(ing)
         n = normalize_ingredient_text(name)
         if n:
-            out.add(n)
+            out.append(n)
     return out
 
 
-# Precompute normalized ingredient sets for all recipes
-RECIPE_ING_INDEX: List[Tuple[int, Set[str]]] = [
-    (i, extract_recipe_ingredient_names(r)) for i, r in enumerate(RECIPES)
-]
-
-
-def parse_user_ingredients(text: str) -> Set[str]:
+def parse_user_ingredients(text: str) -> str:
+    """Normalize user-entered ingredient text."""
     parts = re.split(r"[,;\n]+", text)
     items = [p.strip() for p in parts if p.strip()]
-    norm = set()
-    for it in items:
-        n = normalize_ingredient_text(it)
-        if n:
-            norm.add(n)
-    return norm
+    norm = [normalize_ingredient_text(it) for it in items if it]
+    return " ".join(norm)
 
 
-def match_score_and_details(
-    user_set: Set[str], recipe_set: Set[str]
-) -> Tuple[float, List[str], List[str]]:
-    """Return (score, matched_list, missing_list).
-    Score = matched_count / total_recipe_ingredients (float in [0,1]).
-    Matching uses exact normalized matches, substring matches and fuzzy closeness.
-    """
-    exact = {r for r in recipe_set if r in user_set}
+# ------------------------------------------------------------------
+# Build the TF-IDF Model
+# ------------------------------------------------------------------
+print("Building TF-IDF model from recipes...")
 
-    substr = set()
-    for r in recipe_set:
-        for u in user_set:
-            if u in r or r in u:
-                substr.add(r)
+recipe_texts = [
+    " ".join(extract_recipe_ingredient_names(r))
+    for r in RECIPES
+]
 
-    fuzzy = set()
-    for r in recipe_set:
-        for u in user_set:
-            # attempt close match between tokens
-            choices = difflib.get_close_matches(u, [r], n=1, cutoff=0.78)
-            if choices:
-                fuzzy.add(r)
+vectorizer = TfidfVectorizer()
+tfidf_matrix = vectorizer.fit_transform(recipe_texts)
 
-    matched = exact.union(substr).union(fuzzy)
-    matched_count = len(matched)
-    total = max(1, len(recipe_set))
-    score = matched_count / total
-    missing = sorted(list(recipe_set - matched))
-    matched_list = sorted(list(matched))
-    return score, matched_list, missing
+print(f"Loaded {len(RECIPES)} recipes and built TF-IDF model successfully.")
 
 
-def suggest_dishes_by_ingredients(
-    user_text: str, top_n: int = 8
-):
-    user_set = parse_user_ingredients(user_text)
-    if not user_set:
+# ------------------------------------------------------------------
+# K-Means Clustering on Recipes
+# ------------------------------------------------------------------
+print("Applying K-Means clustering to group similar recipes...")
+
+NUM_CLUSTERS = 6  # adjust this based on your dataset size
+kmeans = KMeans(n_clusters=NUM_CLUSTERS, random_state=42)
+cluster_labels = kmeans.fit_predict(tfidf_matrix)
+
+# Assign each recipe to a cluster
+for i, recipe in enumerate(RECIPES):
+    recipe["cluster"] = int(cluster_labels[i])
+
+print(f"Recipes successfully grouped into {NUM_CLUSTERS} clusters.\n")
+
+# Optional: display cluster summary
+clusters = defaultdict(list)
+for r in RECIPES:
+    clusters[r["cluster"]].append(r.get("dish_name", "Unnamed"))
+
+print("Cluster Overview (sample dishes per cluster):")
+for cid, dishes in clusters.items():
+    print(f"  Cluster {cid + 1}: {', '.join(dishes[:5])}")
+print("\n")
+
+
+# ------------------------------------------------------------------
+# Suggestion Logic
+# ------------------------------------------------------------------
+def suggest_dishes_by_ingredients(user_text: str, top_n: int = 8):
+    user_norm = parse_user_ingredients(user_text)
+    if not user_norm:
         return []
+    user_vec = vectorizer.transform([user_norm])
+    sims = cosine_similarity(user_vec, tfidf_matrix).flatten()
+    top_idx = sims.argsort()[::-1][:top_n]
     results = []
-    for idx, recipe_set in RECIPE_ING_INDEX:
-        # Only consider recipes that contain ALL user ingredients
-        if all(any(u in r or r in u or difflib.get_close_matches(u, [r], n=1, cutoff=0.78) for r in recipe_set) for u in user_set):
-            score, matched_list, missing = match_score_and_details(user_set, recipe_set)
-            results.append(
-                {
-                    "index": idx,
-                    "score": score,
-                    "matched": matched_list,
-                    "missing": missing,
-                    "total_recipe_ings": len(recipe_set),
-                }
-            )
-    results.sort(key=lambda x: (-x["score"], len(x["missing"])))
-    return results[:top_n]
+    for i in top_idx:
+        if sims[i] > 0:
+            results.append({
+                "index": i,
+                "score": float(sims[i]),
+                "cluster": int(RECIPES[i]["cluster"])
+            })
+    return results
 
 
-def print_recipe_brief(recipe: Dict, details: Dict):
-    print(f"\n{recipe.get('dish_name') or recipe.get('title','Unnamed')}")
-    print(
-        f"Cuisine: {recipe.get('cuisine','?')} | Type: {recipe.get('type','?')} | Time: {recipe.get('time_to_prepare_minutes','?')} mins"
-    )
-    print(
-        f"Match: {details['score']*100:.0f}%  (matched {len(details['matched'])}/{details['total_recipe_ings']})"
-    )
-    if details["matched"]:
-        print("  Matched:", ", ".join(details["matched"]))
-    if details["missing"]:
-        print("  Missing:", ", ".join(details["missing"]))
-
-
+# ------------------------------------------------------------------
+# Display Helpers
+# ------------------------------------------------------------------
 def try_parse_float(val):
-    """Try to parse a value as float, else return None."""
     try:
         return float(val)
     except (TypeError, ValueError):
@@ -187,6 +153,7 @@ def print_recipe_full(recipe: Dict, scale: float = 1.0):
     print(f"DISH: {recipe.get('dish_name') or recipe.get('title','Unnamed')}")
     print(f"Cuisine: {recipe.get('cuisine','?')}")
     print(f"Type: {recipe.get('type','?')}")
+    print(f"Cluster Group: {recipe.get('cluster','?')}")
     print(f"Time to prepare (mins): {recipe.get('time_to_prepare_minutes','?')}")
     print("\nINGREDIENTS:")
     for ing in recipe.get("ingredients", []):
@@ -198,7 +165,6 @@ def print_recipe_full(recipe: Dict, scale: float = 1.0):
                 qf = try_parse_float(q)
                 if qf is not None:
                     scaled_q = qf * scale
-                    # Show as int if possible, else 2 decimals
                     if scaled_q.is_integer():
                         scaled_q_str = str(int(scaled_q))
                     else:
@@ -215,66 +181,54 @@ def print_recipe_full(recipe: Dict, scale: float = 1.0):
     print("\n" + "=" * 50)
 
 
+# ------------------------------------------------------------------
+# Interactive Loop
+# ------------------------------------------------------------------
 def interactive_loop():
-    print(
-        "Standalone Dish Suggester — enter your available ingredients and get matching recipes."
-    )
+    print("\nML-based Dish Suggester — enter your available ingredients.")
     while True:
-        text = input(
-            "\nEnter available ingredients (comma separated) or Q to quit:\n> "
-        ).strip()
+        text = input("\nEnter available ingredients (comma separated) or Q to quit:\n> ").strip()
         if not text:
             continue
         if text.lower() in ("q", "quit", "exit"):
-            print("Goodbye")
+            print("Goodbye!")
             break
+
         suggestions = suggest_dishes_by_ingredients(text, top_n=10)
         if not suggestions:
-            print("Not in our knowledge.")
+            print("No matching recipes found.")
             continue
-        print(f"\nFound {len(suggestions)} candidate recipes:")
+
+        print(f"\nTop {len(suggestions)} matching recipes:")
         for i, s in enumerate(suggestions, 1):
             recipe = RECIPES[s["index"]]
-            print(
-                f"{i}.",
-                recipe.get("dish_name") or recipe.get("title", "Unnamed"),
-                f"- {s['score']*100:.0f}%"
-            )
-        # allow user to view full recipe
+            print(f"{i}. {recipe.get('dish_name') or recipe.get('title','Unnamed')}  "
+                  f"({s['score']*100:.1f}% similarity, Cluster {s['cluster']})")
+
+        sel = input("\nEnter recipe number to view details or press Enter to search again: ").strip()
+        if not sel:
+            continue
         try:
-            sel = input(
-                "\nSelect a recipe number to view details, A to view all briefs, or press Enter to search again: "
-            ).strip()
-            if not sel:
-                continue
-            if sel.lower() == "a":
-                for s in suggestions:
-                    print_recipe_brief(RECIPES[s["index"]], s)
-                continue
             sel_i = int(sel)
             if 1 <= sel_i <= len(suggestions):
-                # Ask for number of people only when viewing a recipe
+                chosen = RECIPES[suggestions[sel_i - 1]["index"]]
                 while True:
-                    num_input = input("How many people do you want to serve? (default 1): ").strip()
+                    num_input = input("How many people to serve? (default 1): ").strip()
                     if not num_input:
                         num_people = 1
                         break
                     try:
                         num_people = int(num_input)
                         if num_people < 1:
-                            print("Please enter a positive integer.")
+                            print("Please enter a positive number.")
                             continue
                         break
                     except ValueError:
-                        print("Invalid input. Please enter a number.")
-                chosen = RECIPES[suggestions[sel_i - 1]["index"]]
+                        print("Invalid input, try again.")
                 print_recipe_full(chosen, scale=num_people)
-            else:
-                print("Invalid selection")
-        except Exception as e:
+        except Exception:
             print("Invalid input, try again.")
 
 
 if __name__ == "__main__":
     interactive_loop()
-   

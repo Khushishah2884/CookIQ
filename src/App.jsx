@@ -10,7 +10,6 @@ import Footer from './components/Footer';
 import SignUp from './components/SignUp';
 import SignIn from './components/SignIn';
 import Profile from './components/Profile';
-import DishResult from './components/DishResult';
 import './App.css';
 
 function App() {
@@ -96,14 +95,6 @@ function App() {
                     }
                     return <Hero onModuleChange={handleModuleChange} />;
                   })()
-            }
-          />
-          <Route
-            path="/dish-result"
-            element={
-              recipeData
-                ? <DishResult recipes={recipeData.recipes || []} servings={recipeData.servings} />
-                : <Hero onModuleChange={handleModuleChange} />
             }
           />
         </Routes>

@@ -16,6 +16,9 @@ const RecipeResults = ({ data }) => {
   const [modalRecipe, setModalRecipe] = useState(null);
   const [visibleCount, setVisibleCount] = useState(12);
   const [savedIds, setSavedIds] = useState([]);
+  const [userRating, setUserRating] = useState(0);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedback, setFeedback] = useState('');
   const user = JSON.parse(localStorage.getItem('user'));
   const token = localStorage.getItem('token');
 
@@ -40,6 +43,19 @@ const RecipeResults = ({ data }) => {
     } catch {
       alert('Failed to save recipe.');
     }
+  };
+
+  // Rating and feedback handlers
+  const handleRating = (star) => {
+    setUserRating(star);
+    setShowFeedback(true);
+  };
+  const submitFeedback = () => {
+    // You can send feedback to backend here if needed
+    alert('Thank you for your feedback!');
+    setShowFeedback(false);
+    setFeedback('');
+    setUserRating(0);
   };
 
   // Infinite scroll: load more on scroll to bottom
@@ -232,88 +248,55 @@ const RecipeResults = ({ data }) => {
                 : `We found ${list.length} recipes for you!`}
             </p>
           </div>
-          <div className="recipes-grid">
-            {showList.length === 0 && (
-              <div>No recipes found.</div>
-            )}
+          
+          <div className="recipe-cards-grid">
             {showList.map((dish, idx) => (
-              <div key={dish._id || dish.id || idx} className="recipe-card card">
-                <div className="recipe-content">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 className="recipe-title">{dish.dish_name || dish.name || dish.title}</h3>
-                    {/* Favorite icon button */}
-                    <button
-                      className="save-btn"
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: 24,
-                        color: savedIds.includes(dish._id || dish.id) ? '#e74c3c' : '#ccc',
-                        transition: 'color 0.2s'
-                      }}
-                      title={savedIds.includes(dish._id || dish.id) ? 'Saved' : 'Save Recipe'}
-                      onClick={() => handleSaveRecipe(dish)}
-                      disabled={savedIds.includes(dish._id || dish.id)}
-                    >
-                      {savedIds.includes(dish._id || dish.id) ? '❤️' : '🤍'}
-                    </button>
-                  </div>
-                  <div className="recipe-meta">
-                    <span className="meta-item">
-                      <span className="meta-icon">⏱️</span>
-                      {dish.time_to_prepare_minutes ? `${dish.time_to_prepare_minutes} min` : dish.cookTime || 'N/A'}
-                    </span>
-                    <span className="meta-item">
-                      <span className="meta-icon">👥</span>
-                      {dish.servings || dish.servings_scaled_to || 'N/A'} servings
-                    </span>
-                  </div>
-                  <div className="ingredients-preview">
-                    <h4>Ingredients:</h4>
-                    <div className="ingredients-list">
-                      {(dish.ingredients || []).slice(0, 3).map((ingredient, i) => (
-                        <div key={i} className="ingredient-item">
-                          <span className="ingredient-name">{ingredient.ingredient || ingredient.name}</span>
-                          <span className="ingredient-amount">{ingredient.quantity || ingredient.amount} {ingredient.unit || ''}</span>
-                        </div>
-                      ))}
-                      {dish.ingredients && dish.ingredients.length > 3 && (
-                        <div className="more-ingredients">
-                          +{dish.ingredients.length - 3} more
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="recipe-instructions">
-                    <h4>Instructions</h4>
-                    <ol>
-                      {formatInstructions(dish.instructions).map((step, i) => (
-                        <li key={i}>{step}</li>
-                      ))}
-                    </ol>
-                  </div>
+              <div key={dish._id || dish.id || idx} className="recipe-preview-card">
+                <div className="preview-header">
+                  <h3>{dish.dish_name || dish.name || dish.title}</h3>
                   <button
-                    className="btn btn-primary"
-                    style={{ marginTop: 12 }}
-                    onClick={() => setModalRecipe(dish)}
+                    className="save-recipe-btn"
+                    onClick={() => handleSaveRecipe(dish)}
+                    disabled={savedIds.includes(dish._id || dish.id)}
                   >
-                    View More
+                    {savedIds.includes(dish._id || dish.id) ? '❤️' : '🤍'}
                   </button>
                 </div>
+                
+                <div className="preview-meta">
+                  <span className="meta-item cuisine">
+                    <span className="meta-icon">🌍</span>
+                    {dish.cuisine || 'N/A'}
+                  </span>
+                  <span className="meta-item time">
+                    <span className="meta-icon">⏱️</span>
+                    {dish.time_to_prepare_minutes ? `${dish.time_to_prepare_minutes} min` : 'N/A'}
+                  </span>
+                </div>
+
+                <div className="preview-ingredients">
+                  <h4>Key Ingredients:</h4>
+                  {(dish.ingredients || []).slice(0, 3).map((ing, i) => (
+                    <span key={i} className="ingredient-tag">
+                      {typeof ing === 'string' ? ing : ing.ingredient || ing.name}
+                    </span>
+                  ))}
+                  {(dish.ingredients || []).length > 3 && (
+                    <span className="ingredient-tag more">
+                      +{dish.ingredients.length - 3} more
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  className="view-details-btn"
+                  onClick={() => setModalRecipe(dish)}
+                >
+                  View Full Recipe
+                </button>
               </div>
             ))}
           </div>
-          {visibleCount < list.length && (
-            <div style={{ textAlign: 'center', margin: '24px 0' }}>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setVisibleCount(visibleCount + 12)}
-              >
-                Load More
-              </button>
-            </div>
-          )}
         </div>
         {renderModal()}
       </section>
@@ -443,7 +426,7 @@ const RecipeResults = ({ data }) => {
       <section className="recipe-details">
         <div className="container">
           <div className="results-header">
-            <h1 className="page-title">🍽️ Recipe Details</h1>
+            <h1 className="page-title">🍽 Recipe Details</h1>
             <p className="page-subtitle">
               {data.dish_name} &ndash; {data.cuisine} &ndash; {data.servings?.scaled_to || data.servings?.base || '?'} servings
             </p>
@@ -483,7 +466,7 @@ const RecipeResults = ({ data }) => {
       <section className="cuisine-dishes-results">
         <div className="container">
           <div className="results-header">
-            <h1 className="page-title">🍽️ {data.cuisine} Dishes</h1>
+            <h1 className="page-title">🍽 {data.cuisine} Dishes</h1>
             <p className="page-subtitle">
               Showing ingredient quantities for <strong>{targetServings}</strong> servings.
             </p>
@@ -517,7 +500,7 @@ const RecipeResults = ({ data }) => {
                   </div>
                   <div className="recipe-meta">
                     <span className="meta-item">
-                      <span className="meta-icon">⏱️</span>
+                      <span className="meta-icon">⏱</span>
                       {dish.time_to_prepare_minutes ? `${dish.time_to_prepare_minutes} min` : 'N/A'}
                     </span>
                     <span className="meta-item">
