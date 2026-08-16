@@ -78,7 +78,8 @@ app = FastAPI(title="Recipe API", version="1.0")
 
 # Allow your frontend origin
 origins = [
-    "http://localhost:3000",  # React app
+    "http://localhost:3000",  # React app (default CRA port)
+    "http://localhost:3456",  # React app (current dev server port)
 ]
 
 app.add_middleware(

@@ -8,7 +8,7 @@ from typing import List, Optional
 import os, json, re, difflib
 
 # ------------------ CONFIG ------------------
-JSON_FILE = r"D:\CookIQ\backend\api\recipes.json"
+JSON_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recipes.json")
 if not os.path.exists(JSON_FILE):
     raise FileNotFoundError(f"JSON file not found at {JSON_FILE}")
 

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Profile.css';
 
 const Profile = ({ onModuleChange }) => {
   const [user, setUser] = useState({ name: '', email: '' });
@@ -17,7 +16,7 @@ const Profile = ({ onModuleChange }) => {
     // Fetch details of the currently signed-in user
     const token = localStorage.getItem('token');
     if (!token) return;
-    fetch('http://localhost:5000/api/users/me', {
+    fetch('http://localhost:5050/api/users/me', {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -28,7 +27,7 @@ const Profile = ({ onModuleChange }) => {
       .catch(() => setMessage('Failed to fetch user details'));
 
     // Fetch saved recipes for the user
-    fetch('http://localhost:5000/api/users/saved-recipes', {
+    fetch('http://localhost:5050/api/users/saved-recipes', {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -57,7 +56,7 @@ const Profile = ({ onModuleChange }) => {
     setMessage('');
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch('http://localhost:5000/api/users/update', {
+      const res = await fetch('http://localhost:5050/api/users/update', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -108,138 +107,193 @@ const Profile = ({ onModuleChange }) => {
   };
 
   return (
-    <div className="profile-page">
-      {/* Hero Section */}
-      <div className="profile-hero">
-        <div className="container">
-          <div className="profile-header">
-            <div className="profile-avatar">
-              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+    <main className="max-w-container-max mx-auto px-gutter py-stack-lg mb-section-gap">
+      {/* Profile Banner Header */}
+      <header className="bg-surface-container-lowest rounded-xl shadow-level-1 mb-stack-lg overflow-hidden relative transition-transform duration-300 hover:shadow-level-2">
+        <div className="h-48 w-full bg-primary-container" />
+        <div className="px-8 pb-8 pt-4 relative flex flex-col md:flex-row items-end md:items-center justify-between -mt-16 gap-stack-md">
+          <div className="flex items-end gap-6 w-full md:w-auto">
+            <div className="w-32 h-32 rounded-full bg-primary text-on-primary flex items-center justify-center font-headline-xl text-headline-xl border-4 border-surface-container-lowest relative z-10 shadow-sm shrink-0 uppercase">
+              {user.name ? user.name.charAt(0) : 'U'}
             </div>
-            <div className="profile-info">
-              <h1>{user.name}</h1>
-              <p>{user.email}</p>
+            <div className="mb-2">
+              <h1 className="font-headline-lg text-headline-lg text-on-surface m-0 p-0">{user.name || 'Your Profile'}</h1>
+              <p className="font-body-md text-body-md text-on-surface-variant mt-1">{user.email}</p>
             </div>
-            {!editMode && (
-              <button className="btn-edit" onClick={handleEdit}>
-                ✏️ Edit Profile
+          </div>
+          {!editMode && (
+            <div className="flex gap-4 w-full md:w-auto justify-start md:justify-end">
+              <button
+                type="button"
+                className="bg-surface-container text-on-surface font-label-lg text-label-lg px-6 py-3 rounded-lg hover:bg-surface-container-high transition-colors"
+                onClick={handleEdit}
+              >
+                Edit Profile
               </button>
-            )}
-          </div>
+              <button
+                type="button"
+                className="bg-primary text-on-primary font-label-lg text-label-lg px-6 py-3 rounded-lg hover:opacity-90 transition-colors shadow-sm flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-sm">share</span>
+                Share Profile
+              </button>
+            </div>
+          )}
         </div>
-      </div>
+      </header>
 
-      <div className="container">
-        {editMode ? (
-          <div className="edit-profile-form card">
-            <h2>Edit Profile</h2>
-            <form onSubmit={handleSave}>
-              <div className="form-group">
-                <label>Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  required
-                />
+      {editMode ? (
+        <div className="bg-surface-container-lowest rounded-xl shadow-level-1 p-8 max-w-xl mx-auto">
+          <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-md">Edit Profile</h2>
+          <form onSubmit={handleSave} className="flex flex-col gap-stack-md">
+            <div className="flex flex-col gap-2">
+              <label className="font-label-lg text-label-lg text-on-surface">Name</label>
+              <input
+                type="text"
+                name="name"
+                className="w-full px-4 py-3 bg-surface rounded-lg border border-surface-dim focus:border-primary focus:ring-2 focus:ring-primary-container/20 font-body-md text-body-md transition-all"
+                value={form.name}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="font-label-lg text-label-lg text-on-surface">Email</label>
+              <input
+                type="email"
+                name="email"
+                className="w-full px-4 py-3 bg-surface rounded-lg border border-surface-dim focus:border-primary focus:ring-2 focus:ring-primary-container/20 font-body-md text-body-md transition-all"
+                value={form.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            {message && (
+              <div className={`font-body-md text-body-md ${message.includes('success') ? 'text-tertiary-container' : 'text-error'}`}>
+                {message}
               </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                />
+            )}
+            <div className="flex gap-stack-md mt-2">
+              <button
+                type="submit"
+                className="bg-primary text-on-primary font-label-lg text-label-lg px-6 py-3 rounded-lg hover:opacity-90 transition-colors shadow-sm"
+              >
+                Save Changes
+              </button>
+              <button
+                type="button"
+                className="bg-surface-container text-on-surface font-label-lg text-label-lg px-6 py-3 rounded-lg hover:bg-surface-container-high transition-colors"
+                onClick={handleCancel}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <>
+          {/* Stats Grid */}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-stack-lg">
+            <div className="bg-surface-container-lowest rounded-xl p-6 shadow-level-1 flex items-center gap-4 transition-transform duration-300 hover:shadow-level-2 hover:-translate-y-1">
+              <div className="w-12 h-12 rounded-full bg-tertiary-container/20 text-tertiary-container flex items-center justify-center">
+                <span className="material-symbols-outlined">bookmark</span>
               </div>
-              {message && (
-                <div className={`message ${message.includes('success') ? 'success' : 'error'}`}>
-                  {message}
-                </div>
-              )}
-              <div className="form-actions">
-                <button type="submit" className="btn-save">
-                  Save Changes
-                </button>
-                <button type="button" className="btn-cancel" onClick={handleCancel}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        ) : (
-          <div className="profile-content">
-            {/* Stats Cards */}
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-value">{savedRecipes.length}</div>
-                <div className="stat-label">Saved Recipes</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">4.8</div>
-                <div className="stat-label">Avg Rating</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">12</div>
-                <div className="stat-label">Cooked</div>
+              <div>
+                <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Saved Recipes</p>
+                <p className="font-headline-md text-headline-md text-on-surface mt-1">{savedRecipes.length}</p>
               </div>
             </div>
+            <div className="bg-surface-container-lowest rounded-xl p-6 shadow-level-1 flex items-center gap-4 transition-transform duration-300 hover:shadow-level-2 hover:-translate-y-1">
+              <div className="w-12 h-12 rounded-full bg-secondary-container/20 text-secondary-container flex items-center justify-center">
+                <span className="material-symbols-outlined">star</span>
+              </div>
+              <div>
+                <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Avg Rating</p>
+                <p className="font-headline-md text-headline-md text-on-surface mt-1">4.8</p>
+              </div>
+            </div>
+            <div className="bg-surface-container-lowest rounded-xl p-6 shadow-level-1 flex items-center gap-4 transition-transform duration-300 hover:shadow-level-2 hover:-translate-y-1">
+              <div className="w-12 h-12 rounded-full bg-primary-container/20 text-primary-container flex items-center justify-center">
+                <span className="material-symbols-outlined">restaurant_menu</span>
+              </div>
+              <div>
+                <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Cooked</p>
+                <p className="font-headline-md text-headline-md text-on-surface mt-1">12</p>
+              </div>
+            </div>
+          </section>
 
-            {/* Saved Recipes Section */}
-            <section className="saved-recipes-section">
-              <h2>My Recipe Collection</h2>
-              {savedRecipes.length === 0 ? (
-                <div className="empty-state">
-                  <span className="empty-icon">📝</span>
-                  <p>No saved recipes yet. Start exploring and save your favorites!</p>
-                </div>
-              ) : (
-                <div className="recipes-grid">
-                  {savedRecipes.map((item, idx) => {
-                    const recipe = item.recipe || {};
-                    return (
-                      <div key={item._id || idx} className="recipe-card">
-                        <div className="recipe-card-content">
-                          <div className="recipe-type-badge">
-                            {recipe.type || 'Recipe'}
-                          </div>
-                          <h3>{recipe.dish_name || recipe.name}</h3>
-                          <div className="recipe-meta">
-                            <span>
-                              <i className="meta-icon">🌍</i>
-                              {recipe.cuisine || 'N/A'}
-                            </span>
-                            <span>
-                              <i className="meta-icon">👥</i>
-                              {recipe.servings_scaled_to || recipe.servings || 'N/A'} servings
-                            </span>
-                            <span>
-                              <i className="meta-icon">⏱️</i>
-                              {recipe.time_to_prepare_minutes ? `${recipe.time_to_prepare_minutes} min` : 'N/A'}
-                            </span>
-                          </div>
-                          <button
-                            className="view-recipe-btn"
-                            onClick={() => handleRecipeSelected(recipe)}
-                            disabled={loadingRecipe === (recipe._id || recipe.id || recipe.dish_name)}
-                          >
-                            {loadingRecipe === (recipe._id || recipe.id || recipe.dish_name)
-                              ? 'Loading...'
-                              : 'View Recipe →'}
-                          </button>
+          {/* Recipe Collection Section */}
+          <section>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-headline-md text-headline-md text-on-surface">My Recipe Collection</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {savedRecipes.map((item, idx) => {
+                const recipe = item.recipe || {};
+                const recipeKey = recipe._id || recipe.id || recipe.dish_name;
+                return (
+                  <article
+                    key={item._id || idx}
+                    className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-level-1 flex flex-col transition-all duration-300 hover:shadow-level-2 hover:-translate-y-1"
+                  >
+                    <div className="p-4 flex-1 flex flex-col gap-2">
+                      <span className="inline-flex w-fit items-center rounded-full bg-primary-container/10 text-primary px-3 py-1 font-label-sm text-label-sm font-semibold">
+                        {recipe.type || 'Recipe'}
+                      </span>
+                      <h3 className="font-headline-sm text-headline-sm text-on-surface mt-1">
+                        {recipe.dish_name || recipe.name}
+                      </h3>
+                      <div className="flex flex-col gap-1 mt-auto pt-4 border-t border-surface-variant text-on-surface-variant">
+                        <div className="flex items-center gap-1 font-label-sm text-label-sm">
+                          <span className="material-symbols-outlined text-sm">public</span>
+                          {recipe.cuisine || 'N/A'}
+                        </div>
+                        <div className="flex items-center gap-1 font-label-sm text-label-sm">
+                          <span className="material-symbols-outlined text-sm">group</span>
+                          {recipe.servings_scaled_to || recipe.servings || 'N/A'} servings
+                        </div>
+                        <div className="flex items-center gap-1 font-label-sm text-label-sm">
+                          <span className="material-symbols-outlined text-sm">schedule</span>
+                          {recipe.time_to_prepare_minutes ? `${recipe.time_to_prepare_minutes} min` : 'N/A'}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <button
+                        type="button"
+                        className="mt-3 text-primary hover:text-primary-container font-label-lg text-label-lg flex items-center gap-1 transition-colors disabled:opacity-60"
+                        onClick={() => handleRecipeSelected(recipe)}
+                        disabled={loadingRecipe === recipeKey}
+                      >
+                        {loadingRecipe === recipeKey ? (
+                          'Loading...'
+                        ) : (
+                          <>
+                            View Recipe <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+
+              {/* Empty State Card */}
+              {savedRecipes.length === 0 && (
+                <article className="bg-surface-container border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center p-6 min-h-[300px] col-span-1 md:col-span-2 lg:col-span-4">
+                  <div className="w-16 h-16 rounded-full bg-surface-container-lowest flex items-center justify-center text-outline shadow-sm mb-4">
+                    <span className="material-symbols-outlined text-3xl">note_add</span>
+                  </div>
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface text-center mb-2">Save More Recipes</h3>
+                  <p className="font-body-md text-body-md text-on-surface-variant text-center">
+                    No saved recipes yet. Start exploring and save your favorites!
+                  </p>
+                </article>
               )}
-            </section>
-          </div>
-        )}
-      </div>
-    </div>
+            </div>
+          </section>
+        </>
+      )}
+    </main>
   );
 };
 
