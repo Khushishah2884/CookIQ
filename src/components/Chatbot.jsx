@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './Chatbot.css';
 
-// Replace with your Gemini API endpoint and key
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-const GEMINI_API_KEY = 'AIzaSyCqa9lQdRsCcJrGduoWKSTtGFyH5X2YqaE';
+// The Gemini API call happens server-side (backend/chatRoutes.js) so the API
+// key never ships to the browser.
+const CHAT_API_URL = 'http://localhost:5050/api/chat';
 
 const Chatbot = ({ isOpen, onToggle }) => {
   const [messages, setMessages] = useState([
@@ -35,31 +36,21 @@ const Chatbot = ({ isOpen, onToggle }) => {
     scrollToBottom();
   }, [messages]);
 
-  // Gemini API integration
+  // Chat backend integration (proxies to Gemini server-side)
   const fetchGeminiResponse = async (userMessage) => {
     try {
-      const res = await fetch(GEMINI_API_URL, {
+      const res = await fetch(CHAT_API_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-goog-api-key': GEMINI_API_KEY
-        },
-        body: JSON.stringify({
-          contents: [
-            { parts: [{ text: userMessage }] }
-          ]
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage })
       });
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        return `Gemini API error: ${res.status} ${res.statusText}`;
+        return data?.message || `Chat error: ${res.status} ${res.statusText}`;
       }
-      const data = await res.json();
-      return (
-        data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-        "Sorry, I couldn't get a response from Gemini."
-      );
+      return data?.reply || "Sorry, I couldn't get a response. Please try again.";
     } catch (err) {
-      return "Sorry, there was an error connecting to Gemini API.";
+      return "Sorry, there was an error connecting to the assistant.";
     }
   };
 
@@ -155,7 +146,11 @@ const Chatbot = ({ isOpen, onToggle }) => {
           {messages.map(message => (
             <div key={message.id} className={`message ${message.type}`}>
               <div className="message-content">
-                {message.content}
+                {message.type === 'bot' ? (
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                ) : (
+                  message.content
+                )}
               </div>
               <div className="message-time">
                 {formatTime(message.timestamp)}

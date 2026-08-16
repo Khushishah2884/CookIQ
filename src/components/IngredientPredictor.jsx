@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import './IngredientPredictor.css';
 
 const IngredientPredictor = ({ onRecipeGenerated }) => {
   const [searchMode, setSearchMode] = useState('dish'); // 'dish' or 'cuisine'
@@ -17,7 +16,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
   const token = localStorage.getItem('token');
 
   const cuisineOptions = [
-    'Andhra Pradesh', 'Bengali', 'Bihari','East', 'Gujarati', 'Hyderabadi', 
+    'Andhra Pradesh', 'Bengali', 'Bihari','East', 'Gujarati', 'Hyderabadi',
     'Karnataka', 'Kashmiri', 'Kerala', 'Madhya Pradesh', 'Maharashtrian','Marwari','Rajasthani','Sindhi',
     'Tamil Nadu','Uttar Pradesh','Punjabi','Indian',
   ];
@@ -125,6 +124,10 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
     const val = e.target.value;
     setBaseServings(val === '' ? '' : Math.max(1, parseInt(val) || 1));
   };
+  const incrementServings = () => setServings(s => Math.max(1, (parseInt(s, 10) || 1) + 1));
+  const decrementServings = () => setServings(s => Math.max(1, (parseInt(s, 10) || 1) - 1));
+  const incrementBaseServings = () => setBaseServings(s => Math.max(1, (parseInt(s, 10) || 1) + 1));
+  const decrementBaseServings = () => setBaseServings(s => Math.max(1, (parseInt(s, 10) || 1) - 1));
 
   const handleSaveRecipe = async (recipe) => {
     if (!user || !token) {
@@ -132,7 +135,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
       return;
     }
     try {
-      const res = await fetch('http://localhost:5000/api/users/save-recipe', {
+      const res = await fetch('http://localhost:5050/api/users/save-recipe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,7 +158,7 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
       return;
     }
     try {
-      const res = await fetch('http://localhost:5000/api/users/save-recipe', {
+      const res = await fetch('http://localhost:5050/api/users/save-recipe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,44 +174,48 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
     }
   };
 
+  const scalingFactor = baseServings > 0 ? (servings / baseServings).toFixed(2) : '1.00';
+
   // Render results (for both options)
   const renderResults = (data) => {
     if (!data) return null;
     const recipes = data.dishes || data.recipes || [];
     return (
-      <div className="results-list">
+      <div className="flex flex-col gap-stack-md mt-stack-lg">
         {recipes.map((recipe, idx) => (
-          <div className="recipe-card card" key={idx}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="recipe-name">{recipe.dish_name || recipe.name}</h3>
-              {/* Favorite icon button */}
+          <div
+            key={idx}
+            className="bg-surface-container-lowest rounded-xl shadow-level-1 hover-lift overflow-hidden p-6 flex flex-col gap-3 border border-surface-container-low"
+          >
+            <div className="flex justify-between items-center">
+              <h3 className="font-headline-sm text-headline-sm text-on-surface">
+                {recipe.dish_name || recipe.name}
+              </h3>
               <button
-                className="save-btn"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 24,
-                  color: savedIds.includes(recipe._id || recipe.id) ? '#e74c3c' : '#ccc',
-                  transition: 'color 0.2s'
-                }}
+                type="button"
+                className="bg-transparent border-none cursor-pointer p-1"
                 title={savedIds.includes(recipe._id || recipe.id) ? 'Saved' : 'Save Recipe'}
                 onClick={() => handleSaveRecipe(recipe)}
                 disabled={savedIds.includes(recipe._id || recipe.id)}
               >
-                {savedIds.includes(recipe._id || recipe.id) ? '❤' : '🤍'}
+                <span
+                  className="material-symbols-outlined text-2xl text-secondary"
+                  style={{
+                    fontVariationSettings: savedIds.includes(recipe._id || recipe.id) ? "'FILL' 1" : "'FILL' 0"
+                  }}
+                >
+                  favorite
+                </span>
               </button>
             </div>
-            {/* ...other recipe info... */}
-            <div className="recipe-instructions">
-              <h4>Instructions:</h4>
-              <ol>
+            <div>
+              <h4 className="font-label-lg text-label-lg text-on-surface-variant mb-2">Instructions</h4>
+              <ol className="list-decimal list-inside space-y-1 font-body-md text-body-md text-on-surface">
                 {(recipe.instructions || '').split(/\s*\d+\.\s*/).map((step, i) =>
                   step && !/^\d+$/.test(step) ? <li key={i}>{step.trim()}</li> : null
                 )}
               </ol>
             </div>
-            {/* ...existing code... */}
           </div>
         ))}
       </div>
@@ -219,33 +226,40 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
   const renderPredictedRecipe = () => {
     if (!predictedRecipe) return null;
     return (
-      <div className="predicted-recipe-card card" style={{ marginTop: 32 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0 }}>{predictedRecipe.dish_name}</h2>
+      <div className="bg-surface-container-lowest rounded-xl shadow-level-1 hover-lift overflow-hidden p-6 md:p-8 flex flex-col gap-4 border border-surface-container-low mt-stack-lg">
+        <div className="flex justify-between items-center">
+          <h2 className="font-headline-md text-headline-md text-on-surface m-0">{predictedRecipe.dish_name}</h2>
           <button
-            className="save-btn"
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: isRecipeSaved ? 'default' : 'pointer',
-              fontSize: 28,
-              color: isRecipeSaved ? '#e74c3c' : '#ccc',
-              transition: 'color 0.2s'
-            }}
+            type="button"
+            className="bg-transparent border-none p-1"
+            style={{ cursor: isRecipeSaved ? 'default' : 'pointer' }}
             title={isRecipeSaved ? 'Saved' : 'Save Recipe'}
             onClick={isRecipeSaved ? undefined : handleSavePredictedRecipe}
             disabled={isRecipeSaved}
           >
-            {isRecipeSaved ? '❤' : '🤍'}
+            <span
+              className="material-symbols-outlined text-3xl text-secondary"
+              style={{ fontVariationSettings: isRecipeSaved ? "'FILL' 1" : "'FILL' 0" }}
+            >
+              favorite
+            </span>
           </button>
         </div>
-        <div style={{ marginTop: 8, color: '#667eea' }}>
-          <strong>Cuisine:</strong> {predictedRecipe.cuisine || 'N/A'} &nbsp; | &nbsp;
-          <strong>Servings:</strong> {servings}
+        <div className="flex flex-wrap items-center gap-2 font-label-lg text-label-lg text-primary">
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary-container/10 px-3 py-1">
+            <span className="material-symbols-outlined text-sm">public</span>
+            {predictedRecipe.cuisine || 'N/A'}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary-container/10 px-3 py-1">
+            <span className="material-symbols-outlined text-sm">group</span>
+            {servings} servings
+          </span>
         </div>
-        <div style={{ marginTop: 16 }}>
-          <strong>Ingredients:</strong>
-          <ul>
+        <div>
+          <h4 className="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-wider mb-2">
+            Ingredients
+          </h4>
+          <ul className="space-y-1 font-body-md text-body-md text-on-surface list-disc list-inside">
             {(predictedRecipe.ingredients || []).map((ing, idx) => (
               <li key={idx}>
                 {ing.ingredient} - {ing.quantity} {ing.unit}
@@ -253,235 +267,290 @@ const IngredientPredictor = ({ onRecipeGenerated }) => {
             ))}
           </ul>
         </div>
-        <div style={{ marginTop: 16 }}>
-          <strong>Instructions:</strong>
-          <div>{predictedRecipe.instructions}</div>
+        <div>
+          <h4 className="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-wider mb-2">
+            Instructions
+          </h4>
+          <div className="font-body-md text-body-md text-on-surface whitespace-pre-line">
+            {predictedRecipe.instructions}
+          </div>
         </div>
       </div>
     );
   };
 
   return (
-    <section className="ingredient-predictor">
-      <div className="container">
-        <div className="predictor-header">
-          <h1 className="page-title">📊 Ingredient Predictor</h1>
-          <p className="page-subtitle">
-            Enter a dish name or cuisine and serving size, and our AI will predict the exact ingredient quantities you need!
+    <main className="flex-grow w-full max-w-container-max mx-auto px-gutter py-stack-lg grid grid-cols-1 md:grid-cols-12 gap-gutter">
+      {/* Left Column: Primary Inputs (8 cols) */}
+      <div className="col-span-1 md:col-span-8 flex flex-col gap-stack-lg">
+        <div className="flex flex-col gap-stack-sm">
+          <h1 className="font-headline-xl text-headline-xl text-on-surface">Ingredient Predictor</h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant">
+            Enter a dish name or cuisine and serving size, and our AI will predict the exact ingredient quantities
+            you need.
           </p>
+          <div className="inline-flex bg-surface-container-low p-1 rounded-xl mt-4 self-start">
+            <label
+              className={`px-6 py-2 rounded-lg font-label-lg text-label-lg cursor-pointer transition-colors ${
+                searchMode === 'dish'
+                  ? 'bg-white shadow-sm text-primary font-bold'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <input
+                type="radio"
+                name="searchMode"
+                value="dish"
+                checked={searchMode === 'dish'}
+                onChange={() => setSearchMode('dish')}
+                className="sr-only"
+              />
+              By Dish Name
+            </label>
+            <label
+              className={`px-6 py-2 rounded-lg font-label-lg text-label-lg cursor-pointer transition-colors ${
+                searchMode === 'cuisine'
+                  ? 'bg-white shadow-sm text-primary font-bold'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <input
+                type="radio"
+                name="searchMode"
+                value="cuisine"
+                checked={searchMode === 'cuisine'}
+                onChange={() => setSearchMode('cuisine')}
+                className="sr-only"
+              />
+              By Cuisine
+            </label>
+          </div>
         </div>
 
-        <div className="predictor-content">
-          <div className="predictor-form-section">
-            <form onSubmit={handleSubmit} className="predictor-form card">
-              <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="form-label">Search Mode:</label>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <label>
-                    <input
-                      type="radio"
-                      name="searchMode"
-                      value="dish"
-                      checked={searchMode === 'dish'}
-                      onChange={() => setSearchMode('dish')}
-                    />{' '}
-                    By Dish Name
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="searchMode"
-                      value="cuisine"
-                      checked={searchMode === 'cuisine'}
-                      onChange={() => setSearchMode('cuisine')}
-                    />{' '}
-                    By Cuisine
-                  </label>
-                </div>
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-xl shadow-level-1 p-6 border border-surface-container-low flex flex-col gap-stack-md"
+        >
+          {searchMode === 'dish' ? (
+            <div className="flex flex-col gap-2 relative">
+              <label className="font-label-lg text-label-lg text-on-surface">What are you cooking?</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+                  restaurant_menu
+                </span>
+                <input
+                  type="text"
+                  className="w-full pl-12 pr-4 py-4 bg-surface rounded-xl border border-surface-dim focus:border-primary focus:ring-2 focus:ring-primary-container/20 font-body-lg text-body-lg transition-all"
+                  placeholder="e.g. Paneer Tikka, Dhokla..."
+                  value={dishName}
+                  onChange={handleDishNameChange}
+                  required={searchMode === 'dish'}
+                />
               </div>
-
-              {searchMode === 'dish' ? (
-                <div className="form-group">
-                  <label className="form-label">
-                    <span className="label-icon">🍽</span>
-                    Dish Name
-                  </label>
-                  <div className="autocomplete-container">
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Enter dish name (e.g., Paneer tikka , dhokla...)"
-                      value={dishName}
-                      onChange={handleDishNameChange}
-                      required={searchMode === 'dish'}
-                    />
-                    {suggestions.length > 0 && (
-                      <div className="suggestions-dropdown">
-                        {suggestions.map((suggestion, index) => (
-                          <div
-                            key={index}
-                            className="suggestion-item"
-                            onClick={() => selectSuggestion(suggestion)}
-                          >
-                            {suggestion}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="form-group">
-                  <label className="form-label">
-                    <span className="label-icon">🌍</span>
-                    Cuisine
-                  </label>
-                  <select
-                    className="form-input"
-                    value={cuisine}
-                    onChange={handleCuisineChange}
-                    required={searchMode === 'cuisine'}
-                  >
-                    <option value="">Select cuisine</option>
-                    {cuisineOptions.map(option => (
-                      <option key={option} value={option}>{option}</option>
+              {suggestions.length > 0 && (
+                <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-xl shadow-level-2 border border-surface-container-low z-10">
+                  <ul className="py-2">
+                    {suggestions.map((suggestion, index) => (
+                      <li
+                        key={index}
+                        className="px-4 py-3 hover:bg-surface-container-low cursor-pointer flex items-center gap-3"
+                        onClick={() => selectSuggestion(suggestion)}
+                      >
+                        <span className="material-symbols-outlined text-outline">search</span>
+                        <span className="font-body-md text-body-md">{suggestion}</span>
+                      </li>
                     ))}
-                  </select>
+                  </ul>
                 </div>
               )}
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">
-                    <span className="label-icon">👥</span>
-                    Target Servings
-                  </label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min="1"
-                    max="50"
-                    value={servings}
-                    onChange={handleServingsChange}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">
-                    <span className="label-icon">📏</span>
-                    Base Recipe Servings
-                  </label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min="1"
-                    max="20"
-                    value={baseServings}
-                    onChange={handleBaseServingsChange}
-                  />
-                </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <label className="font-label-lg text-label-lg text-on-surface">Cuisine</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+                  public
+                </span>
+                <select
+                  className="w-full pl-12 pr-4 py-4 bg-surface rounded-xl border border-surface-dim focus:border-primary focus:ring-2 focus:ring-primary-container/20 font-body-lg text-body-lg transition-all"
+                  value={cuisine}
+                  onChange={handleCuisineChange}
+                  required={searchMode === 'cuisine'}
+                >
+                  <option value="">Select cuisine</option>
+                  {cuisineOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
               </div>
+            </div>
+          )}
 
-              <div className="scaling-info">
-                <div className="scaling-factor">
-                  <span className="scaling-label">Scaling Factor:</span>
-                  <span className="scaling-value">
-                    {baseServings > 0 ? (servings / baseServings).toFixed(2) : '1.00'}x
-                  </span>
-                </div>
+          {/* Servings & Scaling Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-stack-md mt-4">
+            <div className="flex flex-col gap-2">
+              <label className="font-label-sm text-label-sm text-on-surface-variant">Base Recipe Servings</label>
+              <div className="flex items-center bg-surface rounded-lg border border-surface-dim p-2 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-container/20 transition-all">
+                <button type="button" className="p-1 text-on-surface-variant hover:text-primary transition-colors" onClick={decrementBaseServings}>
+                  <span className="material-symbols-outlined">remove</span>
+                </button>
+                <input
+                  type="number"
+                  className="w-full text-center bg-transparent border-none focus:ring-0 font-headline-md text-headline-md text-on-surface p-0"
+                  min="1"
+                  max="20"
+                  value={baseServings}
+                  onChange={handleBaseServingsChange}
+                />
+                <button type="button" className="p-1 text-on-surface-variant hover:text-primary transition-colors" onClick={incrementBaseServings}>
+                  <span className="material-symbols-outlined">add</span>
+                </button>
               </div>
+            </div>
 
-              {error && (
-                <div style={{ color: 'red', textAlign: 'center', marginBottom: 12 }}>{error}</div>
-              )}
+            <div className="flex flex-col gap-2">
+              <label className="font-label-sm text-label-sm text-on-surface-variant">Target Servings</label>
+              <div className="flex items-center bg-surface rounded-lg border border-surface-dim p-2 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-container/20 transition-all">
+                <button type="button" className="p-1 text-on-surface-variant hover:text-primary transition-colors" onClick={decrementServings}>
+                  <span className="material-symbols-outlined">remove</span>
+                </button>
+                <input
+                  type="number"
+                  className="w-full text-center bg-transparent border-none focus:ring-0 font-headline-md text-headline-md text-on-surface p-0"
+                  min="1"
+                  max="50"
+                  value={servings}
+                  onChange={handleServingsChange}
+                />
+                <button type="button" className="p-1 text-on-surface-variant hover:text-primary transition-colors" onClick={incrementServings}>
+                  <span className="material-symbols-outlined">add</span>
+                </button>
+              </div>
+            </div>
 
-              <button 
-                type="submit" 
-                className="btn btn-primary btn-large w-full"
-                disabled={isLoading || (searchMode === 'dish' ? !dishName.trim() : !cuisine.trim())}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="loading-spinner"></div>
-                    Predicting Ingredients...
-                  </>
-                ) : (
-                  <>
-                    Predict Ingredients 🔮
-                  </>
-                )}
-              </button>
-            </form>
+            <div className="bg-primary-container/10 rounded-lg p-4 flex flex-col justify-center items-center border border-primary-container/20">
+              <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Scaling Factor</span>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="font-headline-lg text-headline-lg text-primary">{scalingFactor}</span>
+                <span className="font-headline-sm text-headline-sm text-primary">x</span>
+              </div>
+            </div>
           </div>
 
-          <div className="predictor-info-section">
-            <div className="ml-info card">
-              <h3>🤖 AI-Powered Predictions</h3>
-              <div className="ml-stats">
-                <div className="ml-stat">
-                  <div className="stat-value">95%</div>
-                  <div className="stat-label">Accuracy</div>
-                </div>
-                <div className="ml-stat">
-                  <div className="stat-value">3K+</div>
-                  <div className="stat-label">Recipes Trained</div>
-                </div>
-                <div className="ml-stat">
-                  <div className="stat-value">10+</div>
-                  <div className="stat-label">Cuisines</div>
-                </div>
-              </div>
-              <p>Our machine learning model has been trained on thousands of recipes to provide accurate ingredient predictions.</p>
-            </div>
+          {error && (
+            <div className="text-error text-center font-body-md text-body-md">{error}</div>
+          )}
 
-            <div className="features-info card">
-              <h3>✨ Smart Features</h3>
-              <ul className="features-list">
-                <li>
-                  <span className="feature-icon">🎯</span>
-                  <div>
-                    <strong>Precise Scaling</strong>
-                    <p>Intelligent scaling that considers ingredient behavior</p>
-                  </div>
-                </li>
-                <li>
-                  <span className="feature-icon">📈</span>
-                  <div>
-                    <strong>Confidence Scores</strong>
-                    <p>See how confident our AI is about each prediction</p>
-                  </div>
-                </li>
-                <li>
-                  <span className="feature-icon">🔄</span>
-                  <div>
-                    <strong>Continuous Learning</strong>
-                    <p>Model improves with user feedback and ratings</p>
-                  </div>
-                </li>
-              </ul>
-            </div>
+          <button
+            type="submit"
+            className="w-full mt-6 bg-primary text-on-primary font-label-lg text-label-lg py-4 rounded-xl hover:opacity-90 transition-colors shadow-md flex justify-center items-center gap-2 disabled:opacity-60"
+            disabled={isLoading || (searchMode === 'dish' ? !dishName.trim() : !cuisine.trim())}
+          >
+            {isLoading ? (
+              <>
+                <div className="loading-spinner"></div>
+                Predicting Ingredients...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined">auto_awesome</span>
+                Predict Ingredients
+              </>
+            )}
+          </button>
+        </form>
 
-            <div className="popular-dishes card">
-              <h3>🔥 Popular Dishes</h3>
-              <div className="dishes-grid">
-                {suggestions.slice(0, 6).map((dish, index) => (
-                  <button
-                    key={index}
-                    className="dish-tag"
-                    onClick={() => setDishName(dish)}
-                  >
-                    {dish}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Popular Dishes Tags */}
+        <div className="flex flex-col gap-stack-sm mt-4">
+          <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
+            Popular Predictions
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.slice(0, 6).map((dish, index) => (
+              <button
+                key={index}
+                type="button"
+                className="px-4 py-2 bg-surface-container border border-surface-dim rounded-full font-label-sm text-label-sm text-on-surface-variant hover:bg-surface-container-high cursor-pointer transition-colors"
+                onClick={() => setDishName(dish)}
+              >
+                {dish}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Show predicted recipe result with heart icon for dish name search */}
         {searchMode === 'dish' && renderPredictedRecipe()}
       </div>
-    </section>
+
+      {/* Right Column: Stats & Smart Features (4 cols) */}
+      <div className="col-span-1 md:col-span-4 flex flex-col gap-stack-lg">
+        <div className="bg-surface-container-lowest rounded-xl shadow-level-1 border border-surface-container-low p-6 flex flex-col gap-stack-md hover-lift">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-primary">database</span>
+            <h3 className="font-headline-sm text-headline-sm text-on-surface">Predictor Engine</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="font-label-sm text-label-sm text-on-surface-variant">Accuracy Rate</span>
+              <span className="font-headline-md text-headline-md text-tertiary-container">95%</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-label-sm text-label-sm text-on-surface-variant">Recipes Analyzed</span>
+              <span className="font-headline-md text-headline-md text-primary">3K+</span>
+            </div>
+            <div className="flex flex-col gap-1 col-span-2">
+              <span className="font-label-sm text-label-sm text-on-surface-variant">Cuisines Supported</span>
+              <div className="flex items-center gap-2">
+                <span className="font-headline-sm text-headline-sm text-on-surface">10+ Cuisines</span>
+                <span className="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface-container-lowest rounded-xl shadow-level-1 border border-surface-container-low p-6 flex flex-col gap-stack-md">
+          <h3 className="font-headline-sm text-headline-sm text-on-surface border-b border-surface-dim pb-3">
+            Smart Features Enabled
+          </h3>
+          <div className="flex flex-col gap-4 mt-2">
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary text-sm">track_changes</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-label-lg text-label-lg text-on-surface">Precise Scaling</span>
+                <span className="font-body-md text-label-sm text-on-surface-variant mt-1">
+                  Intelligent scaling that considers ingredient behavior.
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-tertiary-container/10 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-tertiary-container text-sm">trending_up</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-label-lg text-label-lg text-on-surface">Confidence Scores</span>
+                <span className="font-body-md text-label-sm text-on-surface-variant mt-1">
+                  See how confident our AI is about each prediction.
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-secondary text-sm">sync</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-label-lg text-label-lg text-on-surface">Continuous Learning</span>
+                <span className="font-body-md text-label-sm text-on-surface-variant mt-1">
+                  Model improves with user feedback and ratings.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 };
 

@@ -7,7 +7,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # ----- configure this path to your JSON file -----
-JSON_FILE = r"D:\CookIQ\backend\api\recipes.json"
+JSON_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recipes.json")
 # -------------------------------------------------
 
 if not os.path.exists(JSON_FILE):

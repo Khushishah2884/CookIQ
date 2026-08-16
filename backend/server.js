@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const userRoutes = require('./userRoutes');
+const chatRoutes = require('./chatRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -15,6 +16,7 @@ mongoose.connect(
 
 // This line makes /api/users/signup available
 app.use('/api/users', userRoutes);
+app.use('/api/chat', chatRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

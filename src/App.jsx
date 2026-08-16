@@ -54,10 +54,12 @@ function App() {
     }
   };
 
+  const isAuthPage = location.pathname === '/signin' || location.pathname === '/signup';
+
   return (
     <div className="App">
       <Header onModuleChange={handleModuleChange} activeModule={activeModule} />
-      <main className="main-content">
+      <main className={isAuthPage ? '' : 'main-content'}>
         <Routes>
           <Route
             path="/"
@@ -99,11 +101,13 @@ function App() {
           />
         </Routes>
       </main>
-      <Footer />
-      <Chatbot
-        isOpen={isChatbotOpen}
-        onToggle={() => setIsChatbotOpen(!isChatbotOpen)}
-      />
+      {!isAuthPage && <Footer />}
+      {!isAuthPage && (
+        <Chatbot
+          isOpen={isChatbotOpen}
+          onToggle={() => setIsChatbotOpen(!isChatbotOpen)}
+        />
+      )}
     </div>
   );
 }
